@@ -1,0 +1,66 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+.venv/
+env/
+venv/
+ENV/
+
+# Environment Variables
+.env
+.env.local
+
+# IDEs and Editors
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Testing and Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Data Files & Directories
+# Never commit raw or processed datasets, SQLite databases, or Parquet files
+data/
+*.csv
+*.tsv
+*.parquet
+*.sqlite
+*.sqlite3
+*.db
+*.log
+
+# Keep log folder placeholder if needed
+!data/.gitkeep
+!data/processed/.gitkeep
+!data/logs/.gitkeep
+
+# Operating System
+.DS_Store
+Thumbs.db
+
+
+
+node_modules/

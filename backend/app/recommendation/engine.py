@@ -1,0 +1,357 @@
+from pathlib import Path
+from typing import Dict, List, Optional, Set, Any
+
+from backend.app.config import settings
+from backend.app.models.recommendation import (
+    ExplanationData,
+    RecipeRecommendationItem,
+    RecommendationResponse,
+)
+from backend.app.pantry.pantry_store import pantry_store
+from backend.app.recommendation.hybrid_retriever import HybridRetriever, hybrid_retriever
+from backend.app.recommendation.normalizer import (
+    get_lookup_variants,
+    normalize_pantry_ingredient,
+    normalize_pantry_list,
+    to_singular_form,
+)
+from backend.app.recommendation.personalizer import evaluate_personalization
+from backend.app.recommendation.retriever import RecipeRetriever
+from backend.app.recommendation.scorer import (
+    calculate_dcs,
+    calculate_eps,
+    calculate_final_score,
+    calculate_frps,
+    calculate_ims,
+    calculate_mip,
+    calculate_pus,
+    calculate_qus,
+    calculate_tcs,
+    generate_explanation,
+    generate_frps_explanation,
+)
+from backend.app.substitutions.service import substitution_service
+
+
+class RecommendationEngine:
+    """
+    Explainable pantry-first recipe recommendation & food-rescue decision engine.
+    Executes:
+    Pantry Input / Query Text -> Hybrid Semantic FAISS + SQLite Retrieval -> Detail & Metadata Fetch ->
+    IMS, PUS, EPS, QUS, DCS, TCS, MIP Scoring -> Food Rescue Priority Scoring (FRPS) ->
+    Personalization -> Ranking -> Grounded Explanations.
+    """
+
+    def __init__(
+        self,
+        sqlite_path: Path = settings.SQLITE_INDEX_PATH,
+        parquet_path: Path = settings.PARQUET_PATH,
+        metadata_path: Optional[Path] = settings.METADATA_DB_PATH,
+        ims_weight: float = settings.IMS_WEIGHT,
+        pus_weight: float = settings.PUS_WEIGHT,
+        candidate_limit: int = settings.CANDIDATE_POOL_LIMIT,
+    ):
+        self.retriever = RecipeRetriever(sqlite_path, parquet_path, metadata_path)
+        self.hybrid_retriever = HybridRetriever(sqlite_path, parquet_path, metadata_path)
+        self.ims_weight = ims_weight
+        self.pus_weight = pus_weight
+        self.candidate_limit = candidate_limit
+
+    def recommend(
+        self,
+        pantry_ingredients: List[str],
+        limit: Optional[int] = 10,
+        cuisine: Optional[str] = None,
+        dietary_preference: Optional[str] = None,
+        max_cooking_time_minutes: Optional[int] = None,
+        rescue_mode: bool = False,
+        pantry_items_details: Optional[List[Dict[str, Any]]] = None,
+        query_text: Optional[str] = None,
+    ) -> RecommendationResponse:
+        """
+        Processes a user pantry and query text to produce ranked recipe recommendations.
+        Executes hybrid FAISS vector search and calculates custom Food Rescue Priority Score (FRPS).
+        """
+        limit = limit or settings.DEFAULT_RECOMMENDATION_LIMIT
+
+        applied_preferences = {}
+        if cuisine:
+            applied_preferences["cuisine"] = cuisine
+        if dietary_preference:
+            applied_preferences["dietary_preference"] = dietary_preference
+        if max_cooking_time_minutes is not None:
+            applied_preferences["max_cooking_time_minutes"] = max_cooking_time_minutes
+        if rescue_mode:
+            applied_preferences["rescue_mode"] = True
+
+        pantry_risk_map: Dict[str, str] = {}
+        pantry_qty_map: Dict[str, float] = {}
+
+        if pantry_items_details:
+            for d in pantry_items_details:
+                name_clean = d.get("name", "").lower().strip()
+                norm_clean = d.get("normalized_name", name_clean).lower().strip()
+                risk = d.get("expiry_risk", "low")
+                qty = float(d.get("quantity", 1.0))
+                pantry_risk_map[name_clean] = risk
+                pantry_risk_map[norm_clean] = risk
+                pantry_qty_map[name_clean] = qty
+                pantry_qty_map[norm_clean] = qty
+        else:
+            active_pantry = pantry_store.get_all(status="available")
+            for item in active_pantry:
+                n_clean = item.name.lower().strip()
+                norm_clean = item.normalized_name.lower().strip()
+                pantry_risk_map[n_clean] = item.expiry_risk
+                pantry_risk_map[norm_clean] = item.expiry_risk
+                pantry_qty_map[n_clean] = item.quantity
+                pantry_qty_map[norm_clean] = item.quantity
+
+        # 1. Ingredient Normalization
+        normalized_pantry, all_lookup_variants = normalize_pantry_list(pantry_ingredients)
+        if not normalized_pantry:
+            return RecommendationResponse(
+                normalized_pantry=[],
+                relevant_pantry=[],
+                total_candidates_evaluated=0,
+                rescue_mode=rescue_mode,
+                applied_preferences=applied_preferences,
+                recommendations=[],
+            )
+
+        variant_to_canonical: Dict[str, str] = {}
+        for item in pantry_ingredients:
+            norm = normalize_pantry_ingredient(item)
+            if norm:
+                canonical = to_singular_form(norm) if to_singular_form(norm) else norm
+                for var in get_lookup_variants(norm):
+                    variant_to_canonical[var] = canonical
+
+        # 2. Hybrid Candidate Retrieval (FAISS Semantic Vector Search + SQLite Inverted Index)
+        candidate_ids, details_map, metadata_map = self.hybrid_retriever.retrieve_candidates(
+            pantry_variants=all_lookup_variants,
+            query_text=query_text,
+            limit=self.candidate_limit,
+        )
+
+        if not candidate_ids:
+            return RecommendationResponse(
+                normalized_pantry=normalized_pantry,
+                relevant_pantry=[],
+                total_candidates_evaluated=0,
+                rescue_mode=rescue_mode,
+                applied_preferences=applied_preferences,
+                recommendations=[],
+            )
+
+        # 3. Determine Relevant Pantry Set
+        relevant_pantry_set: Set[str] = set()
+        for r_id in candidate_ids:
+            rec = details_map.get(r_id)
+            if not rec:
+                continue
+            for ing in rec["ner"]:
+                canonical = variant_to_canonical.get(ing)
+                if canonical and canonical in normalized_pantry:
+                    relevant_pantry_set.add(canonical)
+
+        relevant_pantry_list = [p for p in normalized_pantry if p in relevant_pantry_set]
+
+        # 4. Score Candidates
+        scored_candidates: List[RecipeRecommendationItem] = []
+
+        for r_id in candidate_ids:
+            rec = details_map.get(r_id)
+            if not rec:
+                continue
+
+            recipe_ner = rec["ner"]
+            recipe_meta = metadata_map.get(r_id, {})
+
+            # 4a. Base Scores
+            ims, matched, missing = calculate_ims(
+                recipe_ner=recipe_ner,
+                pantry_variants=all_lookup_variants,
+            )
+
+            pus, used_count, total_relevant = calculate_pus(
+                recipe_ner=recipe_ner,
+                relevant_pantry=relevant_pantry_set,
+                pantry_variants_to_canonical=variant_to_canonical,
+            )
+
+            base_score = calculate_final_score(
+                ims=ims,
+                pus=pus,
+                ims_weight=self.ims_weight,
+                pus_weight=self.pus_weight,
+            )
+
+            # 4b. Personalization Evaluation
+            personalized_score, pref_matches, pref_explanation = evaluate_personalization(
+                base_score=base_score,
+                recipe_meta=recipe_meta,
+                user_cuisine=cuisine,
+                user_dietary=dietary_preference,
+                max_cooking_time=max_cooking_time_minutes,
+            )
+
+            if personalized_score < 0.0:
+                continue
+
+            # 4c. Food Rescue Priority Score (FRPS) Calculation
+            eps = calculate_eps(matched, pantry_risk_map)
+            qus = calculate_qus(matched, pantry_qty_map)
+            dcs = calculate_dcs(dietary_preference, recipe_meta.get("dietary_compatibility"))
+            tcs = calculate_tcs(max_cooking_time_minutes, recipe_meta.get("estimated_time_minutes"))
+            mip = calculate_mip(len(missing), len(recipe_ner))
+
+            frps_score, frps_breakdown = calculate_frps(
+                ims=ims,
+                pus=pus,
+                eps=eps,
+                qus=qus,
+                dcs=dcs,
+                tcs=tcs,
+                mip=mip,
+                rescue_mode=rescue_mode,
+            )
+
+            # 4d. Missing Ingredients Categorization & Substitutions
+            essential_missing = []
+            optional_missing = []
+            non_essential_keywords = ["salt", "pepper", "oil", "water", "sugar", "butter", "seasoning", "spice"]
+
+            for m in missing:
+                m_clean = m.lower()
+                if any(kw in m_clean for kw in non_essential_keywords):
+                    optional_missing.append(m)
+                else:
+                    essential_missing.append(m)
+
+            missing_categorized = {
+                "essential": essential_missing,
+                "optional": optional_missing,
+            }
+
+            substitutions = substitution_service.get_substitutions_for_recipe(
+                missing_ingredients=missing,
+                recipe_title=rec["title"],
+                directions=rec["directions"],
+                dietary_preference=dietary_preference,
+            )
+            sub_explanation = substitution_service.generate_substitution_explanation(substitutions)
+
+            # 4e. Explainable AI (XAI) Rationale
+            base_explanation = generate_explanation(
+                matched_count=len(matched),
+                total_recipe_ingredients=len(recipe_ner),
+                relevant_used_count=used_count,
+                total_relevant_count=total_relevant,
+            )
+
+            why_this_recipe = generate_frps_explanation(
+                matched_ingredients=matched,
+                missing_ingredients=missing,
+                total_recipe_ingredients=len(recipe_ner),
+                relevant_used_count=used_count,
+                total_relevant_count=total_relevant,
+                eps=eps,
+                rescue_mode=rescue_mode,
+                dietary_preference=dietary_preference,
+                max_cooking_time=max_cooking_time_minutes,
+            )
+
+            explanation_parts = [base_explanation]
+            if applied_preferences and pref_explanation != "No specific preferences applied.":
+                explanation_parts.append(pref_explanation)
+            if sub_explanation:
+                explanation_parts.append(sub_explanation.strip())
+
+            full_explanation = " ".join(explanation_parts)
+
+            final_ranking_score = frps_score if rescue_mode else personalized_score
+
+            explanation_data = ExplanationData(
+                matched_ingredients=matched,
+                missing_ingredients=missing,
+                matched_count=len(matched),
+                total_recipe_ingredients=len(recipe_ner),
+                relevant_pantry_used_count=used_count,
+                relevant_pantry_total_count=total_relevant,
+                ims=ims,
+                pus=pus,
+                base_score=base_score,
+                final_score=final_ranking_score,
+                frps=frps_score,
+                frps_breakdown=frps_breakdown,
+                why_this_recipe=why_this_recipe,
+                cuisine_bonus=pref_matches.get("cuisine_bonus", 0.0),
+                time_adjustment=pref_matches.get("time_adjustment", 0.0),
+                dietary_filter_applied=dietary_preference,
+            )
+
+            scored_candidates.append(
+                RecipeRecommendationItem(
+                    recipe_id=r_id,
+                    title=rec["title"],
+                    ingredients=rec["ingredients"],
+                    directions=rec["directions"],
+                    link=rec["link"],
+                    source=rec["source"],
+                    ner=recipe_ner,
+                    matched_ingredients=matched,
+                    missing_ingredients=missing,
+                    missing_count=len(missing),
+                    missing_categorized=missing_categorized,
+                    can_prepare_without_missing=len(essential_missing) <= 1,
+                    substitutions=substitutions,
+                    ims=ims,
+                    pus=pus,
+                    recommendation_score=final_ranking_score,
+                    frps=frps_score,
+                    frps_breakdown=frps_breakdown,
+                    why_this_recipe=why_this_recipe,
+                    explanation=full_explanation,
+                    explanation_data=explanation_data,
+                    cuisine=recipe_meta.get("cuisine"),
+                    cuisine_confidence=recipe_meta.get("cuisine_confidence"),
+                    dietary_compatibility=recipe_meta.get("dietary_compatibility"),
+                    dietary_confidence=recipe_meta.get("dietary_confidence"),
+                    estimated_time_minutes=recipe_meta.get("estimated_time_minutes"),
+                    time_confidence=recipe_meta.get("time_confidence"),
+                    preference_matches=pref_matches if applied_preferences else {},
+                    preference_explanation=pref_explanation if applied_preferences else None,
+                )
+            )
+
+        # 5. Deterministic Ranking
+        if rescue_mode:
+            scored_candidates.sort(
+                key=lambda x: (
+                    -x.frps,
+                    -x.ims,
+                    -x.pus,
+                    x.recipe_id,
+                )
+            )
+        else:
+            scored_candidates.sort(
+                key=lambda x: (
+                    -x.recommendation_score,
+                    -x.ims,
+                    -x.pus,
+                    x.recipe_id,
+                )
+            )
+
+        top_recommendations = scored_candidates[:limit]
+
+        return RecommendationResponse(
+            normalized_pantry=normalized_pantry,
+            relevant_pantry=relevant_pantry_list,
+            total_candidates_evaluated=len(scored_candidates),
+            rescue_mode=rescue_mode,
+            applied_preferences=applied_preferences,
+            recommendations=top_recommendations,
+        )
