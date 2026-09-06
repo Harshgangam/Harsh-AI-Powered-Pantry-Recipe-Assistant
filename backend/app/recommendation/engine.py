@@ -200,11 +200,14 @@ class RecommendationEngine:
                 continue
 
             # 4c. Food Rescue Priority Score (FRPS) Calculation
+            # Use deduped total (matched + missing) so singular/plural duplicates
+            # like 'tomato'/'tomatoes' don't inflate the ingredient count.
+            deduped_total = len(matched) + len(missing)
             eps = calculate_eps(matched, pantry_risk_map)
             qus = calculate_qus(matched, pantry_qty_map)
             dcs = calculate_dcs(dietary_preference, recipe_meta.get("dietary_compatibility"))
             tcs = calculate_tcs(max_cooking_time_minutes, recipe_meta.get("estimated_time_minutes"))
-            mip = calculate_mip(len(missing), len(recipe_ner))
+            mip = calculate_mip(len(missing), deduped_total)
 
             frps_score, frps_breakdown = calculate_frps(
                 ims=ims,
@@ -245,7 +248,7 @@ class RecommendationEngine:
             # 4e. Explainable AI (XAI) Rationale
             base_explanation = generate_explanation(
                 matched_count=len(matched),
-                total_recipe_ingredients=len(recipe_ner),
+                total_recipe_ingredients=deduped_total,
                 relevant_used_count=used_count,
                 total_relevant_count=total_relevant,
             )
@@ -253,7 +256,7 @@ class RecommendationEngine:
             why_this_recipe = generate_frps_explanation(
                 matched_ingredients=matched,
                 missing_ingredients=missing,
-                total_recipe_ingredients=len(recipe_ner),
+                total_recipe_ingredients=deduped_total,
                 relevant_used_count=used_count,
                 total_relevant_count=total_relevant,
                 eps=eps,
@@ -276,7 +279,7 @@ class RecommendationEngine:
                 matched_ingredients=matched,
                 missing_ingredients=missing,
                 matched_count=len(matched),
-                total_recipe_ingredients=len(recipe_ner),
+                total_recipe_ingredients=deduped_total,
                 relevant_pantry_used_count=used_count,
                 relevant_pantry_total_count=total_relevant,
                 ims=ims,

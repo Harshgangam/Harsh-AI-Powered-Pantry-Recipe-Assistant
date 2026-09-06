@@ -91,11 +91,67 @@ class RAGKnowledgeBase:
                 metadata={"technique": "sautéing"}
             ),
             KnowledgeDocument(
-                id="kb_tech_2",
+                id="kb_tech_3",
                 category="cooking_technique",
                 title="Spiciness Adjustment Technique",
                 content="To reduce heat in a dish that is too spicy, add dairy (cream, yogurt, milk, cheese), nut butter, acidic juice (lemon/lime), or a touch of sugar/honey.",
                 metadata={"technique": "adjust_spiciness"}
+            ),
+            KnowledgeDocument(
+                id="kb_scaling_1",
+                category="serving_scaling",
+                title="Rice Serving Size Guide",
+                content="Standard serving: 1/4 cup (45g) dry rice per person for a side dish, or 1/3 cup (60g) per person as a main. For 5 people: use 1.25 cups dry rice as a side or ~1.5-2 cups as a main. 1 cup dry rice yields approximately 3 cups cooked rice.",
+                metadata={"ingredient": "rice", "type": "scaling"}
+            ),
+            KnowledgeDocument(
+                id="kb_scaling_2",
+                category="serving_scaling",
+                title="General Ingredient Scaling for More People",
+                content="To scale any recipe for more servings, multiply each ingredient quantity by (desired servings / original servings). For example, a recipe for 2 people scaled to 5 people = multiply all quantities by 2.5. Spices and salt should be scaled more conservatively (start at 1.5x and adjust to taste).",
+                metadata={"type": "scaling", "technique": "scaling"}
+            ),
+            KnowledgeDocument(
+                id="kb_sub_4",
+                category="substitution_rules",
+                title="Garlic Substitutions",
+                content="Fresh garlic can be substituted with: garlic powder (1/8 tsp per clove), garlic paste (0.5 tsp per clove), or asafoetida/hing (a pinch) in Indian cooking. Roasted garlic can replace raw garlic for a milder, sweeter flavor.",
+                metadata={"ingredient": "garlic", "role": "aromatic"}
+            ),
+            KnowledgeDocument(
+                id="kb_sub_5",
+                category="substitution_rules",
+                title="Tomato Substitutions",
+                content="Fresh tomatoes can be substituted with: canned diced tomatoes (3/4 cup per 1 large tomato), tomato paste (1.5 tbsp + 1.5 tbsp water per tomato), or red bell pepper for a milder non-acidic alternative.",
+                metadata={"ingredient": "tomato", "role": "base"}
+            ),
+            KnowledgeDocument(
+                id="kb_sub_6",
+                category="substitution_rules",
+                title="Butter Substitutions",
+                content="Butter can be substituted with: equal amount of ghee (richer flavor), coconut oil (for vegan, adds slight sweetness), olive oil (use 3/4 the amount), or vegan butter (1:1 ratio).",
+                metadata={"ingredient": "butter", "role": "fat", "dietary": ["vegan"]}
+            ),
+            KnowledgeDocument(
+                id="kb_sub_7",
+                category="substitution_rules",
+                title="Milk Substitutions",
+                content="Regular milk can be substituted with: oat milk, almond milk, soy milk, or coconut milk in a 1:1 ratio. For cooking savory dishes, soy milk or oat milk work best. Coconut milk adds richness but also a slight coconut flavor.",
+                metadata={"ingredient": "milk", "role": "liquid", "dietary": ["vegan"]}
+            ),
+            KnowledgeDocument(
+                id="kb_sub_8",
+                category="substitution_rules",
+                title="Lemon Juice Substitutions",
+                content="Lemon juice can be substituted with: equal amount of lime juice, white vinegar (use half the amount), or apple cider vinegar (use half the amount). For zest, use 1/2 tsp dried lemon peel per 1 tsp fresh zest.",
+                metadata={"ingredient": "lemon", "role": "acid"}
+            ),
+            KnowledgeDocument(
+                id="kb_storage_3",
+                category="storage_guidance",
+                title="Cooked Rice Storage",
+                content="Cooked rice should be cooled within 1 hour and stored in an airtight container in the fridge for up to 4 days. Never leave cooked rice at room temperature for more than 2 hours. Reheat thoroughly before eating.",
+                metadata={"ingredient": "rice", "shelf_life": "4 days"}
             ),
         ]
         self.documents = docs

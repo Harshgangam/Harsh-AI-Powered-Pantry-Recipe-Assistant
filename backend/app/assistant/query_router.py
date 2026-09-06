@@ -30,10 +30,21 @@ class QueryRouter:
             r"pantry status", r"what do i have in my pantry", r"check my pantry"
         ],
         "SUBSTITUTION": [
-            r"replace", r"substitute", r"swap", r"instead of", r"without", r"alternative for"
+            r"replace", r"substitute", r"swap", r"instead of", r"without", r"alternative for",
+            r"can i use .* instead", r"what if i don.t have"
+        ],
+        "SCALING": [
+            r"for \d+ people", r"for \d+ persons", r"for \d+ servings",
+            r"how much .* for \d+", r"scale (up|down|for|to)",
+            r"double the recipe", r"half the recipe", r"triple the recipe",
+            r"\d+ servings", r"serve \d+"
         ],
         "COOKING_KNOWLEDGE": [
-            r"what is ", r"how to ", r"define", r"technique", r"meaning of", r"less spicy", r"how do i cook", r"saut", r"explain what"
+            r"what is ", r"how to ", r"define", r"technique", r"meaning of",
+            r"less spicy", r"how do i cook", r"saut", r"explain what",
+            r"how long", r"what temperature", r"store", r"storage",
+            r"who invented", r"history of", r"origin of", r"where did .* come from",
+            r"who created", r"first person to", r"fun fact"
         ],
         "LEFTOVER_QUERY": [
             r"leftover", r"cooked too much", r"yesterday's", r"repurpose"
@@ -46,6 +57,14 @@ class QueryRouter:
         ],
         "RECIPE_EXPLANATION": [
             r"why did you recommend", r"why this recipe", r"why is this good", r"explain score"
+        ],
+        "GENERAL_KNOWLEDGE": [
+            r"who invented", r"history of", r"origin of", r"where did .* come from",
+            r"who created", r"first person to", r"fun fact", r"did you know",
+            r"what is the difference between", r"explain .* to me", r"tell me about",
+            r"can dogs eat", r"is .* healthy", r"is .* safe to eat",
+            r"best pan", r"best pot", r"which knife", r"kitchen tip",
+            r"how many calories", r"nutrition", r"protein in",
         ],
         "RECIPE_SEARCH": [
             r"what can i cook", r"what can i make", r"recipe for", r"meal ideas",

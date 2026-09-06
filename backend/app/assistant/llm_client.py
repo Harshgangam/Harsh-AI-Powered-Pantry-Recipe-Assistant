@@ -53,7 +53,7 @@ class MockLLMClient(BaseLLMClient):
         elif task == AssistantTask.GUIDANCE:
             return self._guidance(context)
         else:
-            return self._answer_question(context, question or "")
+            return self._answer_question(context, question or "", user_prompt)
 
     def _explain(self, context: StructuredRecipeContext) -> str:
         matched_str = ", ".join(context.matched_ingredients) if context.matched_ingredients else "none"
@@ -126,9 +126,58 @@ class MockLLMClient(BaseLLMClient):
         lines.append("4. **Finishing**: Complete according to the remaining recipe steps and serve hot.")
         return "\n".join(lines)
 
-    def _answer_question(self, context: StructuredRecipeContext, question: str) -> str:
+    def _answer_question(self, context: StructuredRecipeContext, question: str, user_prompt: str = "") -> str:
         q_lower = question.lower().strip()
         words = [re.sub(r"[^\w]", "", w) for w in q_lower.split() if w]
+
+        # 0. LEFTOVER / REPURPOSE QUESTIONS — answer using this recipe's ingredients
+        leftover_triggers = ["leftover", "left over", "repurpose", "use up", "make a new dish", "use the rest", "remaining"]
+        if any(t in q_lower for t in leftover_triggers):
+            ner_str = ", ".join(context.ner[:6]) if context.ner else "the ingredients"
+            directions_hint = f" The recipe involves: {context.directions[0].strip()[:120]}..." if context.directions else ""
+            return (
+                f"For leftover ingredients from **{context.title}**, here are some ideas based on this recipe's components ({ner_str}):\n"
+                f"- **Transform into a new dish**: The cooked components from this recipe can be repurposed. "
+                f"For example, sun-dried or roasted ingredients make excellent pasta toppings, sandwich fillings, or pizza toppings.\n"
+                f"- **Store properly**: Keep leftovers in an airtight container in the fridge for up to 3-4 days.\n"
+                f"- **Quick remix**: Toss leftover ingredients from this recipe with pasta, rice, or flatbread for a 10-minute rescued meal.\n"
+                f"{directions_hint}\n"
+                f"*Note: For richer AI-powered suggestions, connect an LLM API key in your `.env` file.*"
+            )
+
+        # 0b. SPEED / FASTER COOKING — answer using this recipe's actual steps
+        speed_triggers = ["faster", "quickly", "quick", "speed up", "in 10 minutes", "in 15 minutes", "in 20 minutes", "less time", "shortcut"]
+        if any(t in q_lower for t in speed_triggers):
+            steps_count = len(context.directions)
+            time_info = f"{context.estimated_time_minutes} minutes" if context.estimated_time_minutes else "an unspecified amount of time"
+            quick_tips = []
+            for idx, step in enumerate(context.directions[:4], 1):
+                step_l = step.lower()
+                if any(kw in step_l for kw in ["preheat", "boil", "heat", "prepare"]):
+                    quick_tips.append(f"- **Step {idx}** (do this first in parallel): {step.strip()[:100]}...")
+            tips_str = "\n".join(quick_tips) if quick_tips else "- Start prep steps (chopping, preheating) simultaneously to save time."
+            return (
+                f"To cook **{context.title}** faster (currently estimated at {time_info}, {steps_count} steps):\n"
+                f"{tips_str}\n"
+                f"- **Parallel prep**: While one step is running (e.g. preheating), prepare ingredients for the next step.\n"
+                f"- **Skip resting time**: If the recipe has any resting or cooling steps, you can reduce them slightly.\n"
+                f"- **High heat option**: Some steps may tolerate slightly higher heat to reduce cook time — watch carefully.\n"
+                f"*Tip: Check the COOKING DIRECTIONS for this recipe's specific steps to identify which ones can overlap.*"
+            )
+
+        # 0c. SCALING — answer using this recipe's actual ingredient list
+        scaling_triggers = ["for 5 people", "for 4 people", "for 3 people", "for 6 people", "for 2 people",
+                            "for 10 people", "scale", "servings", "double", "triple", "half"]
+        serving_match = re.search(r"for\s+(\d+)\s+(?:people|persons?|servings?)", q_lower)
+        if serving_match or any(t in q_lower for t in scaling_triggers):
+            target = int(serving_match.group(1)) if serving_match else 4
+            ing_list = "\n".join([f"- {ing}" for ing in context.ingredients[:8]]) if context.ingredients else "- (ingredients not listed with quantities)"
+            return (
+                f"To scale **{context.title}** for **{target} people**, multiply all ingredient quantities by approximately **{target}/2** "
+                f"(assuming the original recipe serves ~2):\n\n"
+                f"**Original ingredients (scale each by ×{target/2:.1f}):**\n{ing_list}\n\n"
+                f"*General culinary tip: Scale spices and salt more conservatively — start at ×{max(1, target/2 - 0.5):.1f} and adjust to taste.*"
+            )
 
         # 1. SUBSTITUTION INQUIRIES
         sub_triggers = [
@@ -349,11 +398,17 @@ class MockLLMClient(BaseLLMClient):
                     intro = f"Based on the recipe directions for **{context.title}**, the following steps are relevant to your question:"
                 return intro + "\n" + "\n".join(step_lines)
 
-        # 6. UNANSWERABLE / UNVERIFIED QUESTIONS (No Hallucination)
-        subject_desc = f"'{question.strip('?.')}'"
+        # 6. RECIPE-AWARE FALLBACK — always reference the recipe, never give a blank refusal
+        ner_str = ", ".join(context.ner[:5]) if context.ner else "various ingredients"
+        steps_preview = f" It has {len(context.directions)} cooking steps." if context.directions else ""
         return (
-            f"The recipe directions and metadata for **{context.title}** do not contain information regarding {subject_desc}. "
-            f"To avoid guessing or providing ungrounded advice, please consult standard culinary guidance or follow the provided directions."
+            f"I'm running in offline mode for **{context.title}** and couldn't find a specific answer to your question in the recipe data.\n\n"
+            f"Here's what I know about this recipe:\n"
+            f"- **Key ingredients**: {ner_str}\n"
+            f"- **Matched from your pantry**: {', '.join(context.matched_ingredients) if context.matched_ingredients else 'none'}\n"
+            f"- **Missing**: {', '.join(context.missing_ingredients[:3]) if context.missing_ingredients else 'none'}\n"
+            f"- **Estimated cook time**: {context.estimated_time_minutes or 'not specified'} minutes.{steps_preview}\n\n"
+            f"*For full AI-powered answers to any question, add a Gemini or OpenAI API key to your `.env` file.*"
         )
 
 

@@ -1,24 +1,47 @@
 from typing import Dict, List, Optional, Set, Tuple
 
+from backend.app.recommendation.normalizer import to_singular_form
+
+
+def _dedup_recipe_ner(recipe_ner: List[str]) -> List[str]:
+    """
+    Deduplicate recipe NER ingredients by their canonical singular form.
+    When two entries reduce to the same singular (e.g. 'tomatoes' and 'tomato'),
+    only the first occurrence is kept, preserving the original token for display.
+    """
+    seen_singular: Set[str] = set()
+    deduped: List[str] = []
+    for ing in recipe_ner:
+        singular = to_singular_form(ing.lower().strip())
+        if singular not in seen_singular:
+            seen_singular.add(singular)
+            deduped.append(ing)
+    return deduped
+
 
 def calculate_ims(recipe_ner: List[str], pantry_variants: Set[str]) -> Tuple[float, List[str], List[str]]:
     """
     Calculates the Ingredient Match Score (IMS):
     IMS = (matched_recipe_ingredients / total_recipe_ingredients) * 100
+
+    Recipe NER ingredients are deduplicated by singular form before scoring
+    to avoid counting 'tomato' and 'tomatoes' as two separate ingredients.
     """
     if not recipe_ner:
         return 0.0, [], []
 
+    deduped_ner = _dedup_recipe_ner(recipe_ner)
+
     matched = []
     missing = []
 
-    for ing in recipe_ner:
+    for ing in deduped_ner:
         if ing in pantry_variants:
             matched.append(ing)
         else:
             missing.append(ing)
 
-    total = len(recipe_ner)
+    total = len(deduped_ner)
     matched_count = len(matched)
     ims = (matched_count / total) * 100.0 if total > 0 else 0.0
 

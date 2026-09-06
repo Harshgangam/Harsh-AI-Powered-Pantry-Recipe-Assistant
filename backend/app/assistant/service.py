@@ -10,7 +10,12 @@ from backend.app.assistant.models import (
     AssistantStatusResponse,
     GroundingCitation,
 )
-from backend.app.assistant.prompts import SYSTEM_GROUNDING_PROMPT, build_user_prompt
+from backend.app.assistant.prompts import (
+    SYSTEM_GROUNDING_PROMPT,
+    SYSTEM_RECIPE_CONTEXT_PROMPT,
+    build_user_prompt,
+    get_system_prompt_for_intent,
+)
 from backend.app.assistant.query_router import QueryRouter, RoutedQuery
 from backend.app.assistant.rag_engine import rag_knowledge_base, recipe_verifier
 from backend.app.config import settings
@@ -127,12 +132,35 @@ class AssistantService:
             context_str=combined_context_str,
             task=request.task,
             question=query_text,
+            intent=routed.intent,
         )
 
-        # 8. Invoke LLM Client
+        # 8. Select System Prompt
+        # ─────────────────────────────────────────────────────
+        # KEY LOGIC:
+        #   • User is INSIDE a recipe (recipe_id provided by frontend)
+        #     → Always use SYSTEM_RECIPE_CONTEXT_PROMPT so every
+        #       answer (scaling, substitutions, timing, techniques)
+        #       is anchored to THAT specific recipe.
+        #   • User is asking a GENERAL question (no recipe_id)
+        #     → Use Dynamic Prompt Routing based on intent:
+        #         STRICT RAG   → RECIPE_EXPLANATION, PANTRY_QUERY
+        #         GENERAL CHEF → COOKING_KNOWLEDGE, SCALING,
+        #                        SUBSTITUTION, GENERAL_KNOWLEDGE
+        #         HYBRID       → RECIPE_SEARCH, FOOD_RESCUE,
+        #                        LEFTOVER_QUERY, MEAL_PLANNING
+        # ─────────────────────────────────────────────────────
+        if request.recipe_id:
+            # User is in a specific recipe — keep all answers recipe-specific
+            selected_system_prompt = SYSTEM_RECIPE_CONTEXT_PROMPT
+        else:
+            # No recipe context — use free dynamic routing by intent
+            selected_system_prompt = get_system_prompt_for_intent(routed.intent)
+
+        # 9. Invoke LLM Client with the selected prompt
         client = get_llm_client()
         raw_answer = client.generate(
-            system_prompt=SYSTEM_GROUNDING_PROMPT,
+            system_prompt=selected_system_prompt,
             user_prompt=user_prompt,
             context=context,
             task=request.task,

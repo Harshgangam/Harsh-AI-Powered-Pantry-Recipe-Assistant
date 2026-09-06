@@ -54,26 +54,6 @@ export const ExplanationCard: React.FC<ExplanationCardProps> = ({
               <span style={{ color: 'var(--text-dim)', display: 'block' }}>PUS (Utilized)</span>
               <span style={{ fontWeight: 600, color: '#fff' }}>{bd.pus}% (w={bd.w_pus})</span>
             </div>
-            <div style={{ background: 'rgba(0,0,0,0.25)', padding: '6px 10px', borderRadius: '6px' }}>
-              <span style={{ color: 'var(--text-dim)', display: 'block' }}>EPS (Expiry)</span>
-              <span style={{ fontWeight: 600, color: '#f59e0b' }}>{bd.eps} (w={bd.w_eps})</span>
-            </div>
-            <div style={{ background: 'rgba(0,0,0,0.25)', padding: '6px 10px', borderRadius: '6px' }}>
-              <span style={{ color: 'var(--text-dim)', display: 'block' }}>QUS (Qty Util)</span>
-              <span style={{ fontWeight: 600, color: '#fff' }}>{bd.qus}% (w={bd.w_qus})</span>
-            </div>
-            <div style={{ background: 'rgba(0,0,0,0.25)', padding: '6px 10px', borderRadius: '6px' }}>
-              <span style={{ color: 'var(--text-dim)', display: 'block' }}>DCS (Diet)</span>
-              <span style={{ fontWeight: 600, color: '#fff' }}>{bd.dcs} (w={bd.w_dcs})</span>
-            </div>
-            <div style={{ background: 'rgba(0,0,0,0.25)', padding: '6px 10px', borderRadius: '6px' }}>
-              <span style={{ color: 'var(--text-dim)', display: 'block' }}>TCS (Time)</span>
-              <span style={{ fontWeight: 600, color: '#fff' }}>{bd.tcs} (w={bd.w_tcs})</span>
-            </div>
-            <div style={{ background: 'rgba(0,0,0,0.25)', padding: '6px 10px', borderRadius: '6px' }}>
-              <span style={{ color: 'var(--text-dim)', display: 'block' }}>MIP (Missing Pen.)</span>
-              <span style={{ fontWeight: 600, color: '#ef4444' }}>-{bd.mip} (w={bd.w_mip})</span>
-            </div>
           </div>
         </div>
       )}
