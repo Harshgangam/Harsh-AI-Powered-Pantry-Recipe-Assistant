@@ -43,7 +43,7 @@ htmlcov/
 
 # Data Files & Directories
 # Never commit raw or processed datasets, SQLite databases, or Parquet files
-data/
+backend/data/processed/
 *.csv
 *.tsv
 *.parquet
@@ -52,10 +52,7 @@ data/
 *.db
 *.log
 
-# Keep log folder placeholder if needed
-!data/.gitkeep
-!data/processed/.gitkeep
-!data/logs/.gitkeep
+
 
 # Operating System
 .DS_Store
