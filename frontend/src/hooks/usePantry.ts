@@ -1,11 +1,17 @@
 import { useCallback, useState } from 'react';
+import { addPantryItem } from '../services/api';
 
 export function usePantry(initialIngredients: string[] = []) {
   const [ingredients, setIngredients] = useState<string[]>(initialIngredients);
 
-  const addIngredient = useCallback((rawItem: string): boolean => {
+  /**
+   * Adds ingredient to local state AND calls the backend pantry API
+   * when expiryDays is provided (set via Freshness Buttons).
+   * This ensures the Dynamic Pantry Intelligence tab gets a live countdown.
+   */
+  const addIngredient = useCallback((rawItem: string, expiryDays?: number): boolean => {
     if (!rawItem || !rawItem.trim()) return false;
-    
+
     // Support comma-separated pastes e.g. "tomato, garlic, pasta"
     const items = rawItem
       .split(',')
@@ -21,6 +27,21 @@ export function usePantry(initialIngredients: string[] = []) {
           existing.add(item);
           next.push(item);
           addedCount++;
+
+          // Persist to backend pantry store so Pantry Intelligence
+          // shows the live countdown for this ingredient
+          if (expiryDays !== undefined) {
+            addPantryItem({
+              name: item,
+              category: 'General',
+              quantity: 1,
+              unit: 'pcs',
+              expiry_days: expiryDays,
+            }).catch(() => {
+              // Silently ignore if backend call fails —
+              // local state is still updated
+            });
+          }
         }
       }
       return next;

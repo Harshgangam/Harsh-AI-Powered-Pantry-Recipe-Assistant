@@ -19,27 +19,75 @@ class PantryItem(BaseModel):
     status: str = "available"  # "available", "consumed", "expired"
 
 
+class AppNotification(BaseModel):
+    id: str
+    message: str
+    type: str  # e.g., "expired", "cooked"
+    read: bool = False
+    timestamp: str
+
+
 class PantryStore:
     def __init__(self):
+        from backend.app.config import settings
+        self.db_path = settings.DATA_DIR / "pantry_db.json"
+        self.notif_db_path = settings.DATA_DIR / "notifications_db.json"
         self._items: Dict[str, PantryItem] = {}
-        self._seed_default_items()
+        self._notifications: List[AppNotification] = []
+        self._load_from_disk()
+
+    def _load_from_disk(self):
+        # Load pantry items
+        if self.db_path.exists():
+            try:
+                data = json.loads(self.db_path.read_text(encoding="utf-8"))
+                for k, v in data.items():
+                    self._items[k] = PantryItem(**v)
+            except Exception as e:
+                print(f"Error loading pantry DB: {e}")
+        else:
+            self._seed_default_items()
+            self._save()
+            
+        # Load notifications
+        if self.notif_db_path.exists():
+            try:
+                notif_data = json.loads(self.notif_db_path.read_text(encoding="utf-8"))
+                self._notifications = [AppNotification(**n) for n in notif_data]
+            except Exception as e:
+                print(f"Error loading notifications DB: {e}")
+
+    def _save(self):
+        self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        # Save pantry
+        data = {k: v.model_dump() for k, v in self._items.items()}
+        self.db_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+        # Save notifications
+        notif_data = [n.model_dump() for n in self._notifications]
+        self.notif_db_path.write_text(json.dumps(notif_data, indent=2), encoding="utf-8")
+        
+    def add_notification(self, message: str, type: str):
+        notif = AppNotification(
+            id=f"n_{int(datetime.now().timestamp()*1000)}",
+            message=message,
+            type=type,
+            read=False,
+            timestamp=datetime.now().strftime("%Y-%m-%d %H:%M")
+        )
+        self._notifications.insert(0, notif) # Prepend
+        self._save()
+        
+    def get_notifications(self) -> List[AppNotification]:
+        return self._notifications
+        
+    def mark_notifications_read(self):
+        for n in self._notifications:
+            n.read = True
+        self._save()
 
     def _seed_default_items(self):
         today = datetime.now()
-        seed_data = [
-            {"id": "p1", "name": "Tomatoes", "category": "Produce", "quantity": 4.0, "unit": "pcs", "expiry_days": 2, "expiry_risk": "high", "storage_location": "fridge"},
-            {"id": "p2", "name": "Fresh Spinach", "category": "Produce", "quantity": 200.0, "unit": "g", "expiry_days": 1, "expiry_risk": "high", "storage_location": "fridge"},
-            {"id": "p3", "name": "Milk", "category": "Dairy", "quantity": 1.0, "unit": "liter", "expiry_days": 2, "expiry_risk": "high", "storage_location": "fridge"},
-            {"id": "p4", "name": "Paneer", "category": "Dairy", "quantity": 250.0, "unit": "g", "expiry_days": 4, "expiry_risk": "medium", "storage_location": "fridge"},
-            {"id": "p5", "name": "Eggs", "category": "Dairy", "quantity": 6.0, "unit": "pcs", "expiry_days": 5, "expiry_risk": "medium", "storage_location": "fridge"},
-            {"id": "p6", "name": "Pasta", "category": "Grains", "quantity": 500.0, "unit": "g", "expiry_days": 30, "expiry_risk": "low", "storage_location": "pantry"},
-            {"id": "p7", "name": "Rice", "category": "Grains", "quantity": 1000.0, "unit": "g", "expiry_days": 60, "expiry_risk": "low", "storage_location": "pantry"},
-            {"id": "p8", "name": "Garlic", "category": "Produce", "quantity": 1.0, "unit": "bulb", "expiry_days": 14, "expiry_risk": "low", "storage_location": "pantry"},
-            {"id": "p9", "name": "Onion", "category": "Produce", "quantity": 3.0, "unit": "pcs", "expiry_days": 10, "expiry_risk": "low", "storage_location": "pantry"},
-            {"id": "p10", "name": "Olive Oil", "category": "Pantry", "quantity": 500.0, "unit": "ml", "expiry_days": 90, "expiry_risk": "low", "storage_location": "pantry"},
-            {"id": "p11", "name": "Chicken Breast", "category": "Meat", "quantity": 500.0, "unit": "g", "expiry_days": 1, "expiry_risk": "high", "storage_location": "fridge"},
-            {"id": "p12", "name": "Cheddar Cheese", "category": "Dairy", "quantity": 200.0, "unit": "g", "expiry_days": 6, "expiry_risk": "medium", "storage_location": "fridge"},
-        ]
+        seed_data = []
 
         for data in seed_data:
             days = data["expiry_days"]
@@ -64,9 +112,51 @@ class PantryStore:
             self._items[item.id] = item
 
     def get_all(self, status: Optional[str] = "available") -> List[PantryItem]:
-        if status:
-            return [item for item in self._items.values() if item.status == status]
-        return list(self._items.values())
+        today = datetime.now().date()
+        results = []
+        state_changed = False
+        
+        for item in self._items.values():
+            if status and item.status != status:
+                continue
+                
+            # Recompute live days remaining from stored expiry_date
+            if item.expiry_date:
+                try:
+                    exp = datetime.strptime(item.expiry_date, "%Y-%m-%d").date()
+                    live_days = (exp - today).days
+                except Exception:
+                    live_days = item.expiry_days
+            else:
+                live_days = item.expiry_days
+
+            # Auto-expiry: If days < 0 (or = 0 if we treat 0 as expired, let's say < 0 means past due)
+            # The user requested: "if it is three days, and after three days it should be automatically removed... item is just expired today."
+            if live_days < 0 and item.status == "available":
+                item.status = "expired"
+                self.add_notification(f"Your {item.name} has expired and was automatically removed from your pantry.", "expired")
+                state_changed = True
+                if status == "available":
+                    continue # Skip appending it since it's no longer available
+
+            # Recompute risk level based on live days
+            if live_days <= 2:
+                live_risk = "high"
+            elif live_days <= 6:
+                live_risk = "medium"
+            else:
+                live_risk = "low"
+
+            updated = item.model_copy(update={
+                "expiry_days": max(0, live_days), # UI still expects >= 0
+                "expiry_risk": live_risk,
+            })
+            results.append(updated)
+            
+        if state_changed:
+            self._save()
+            
+        return results
 
     def get_item(self, item_id: str) -> Optional[PantryItem]:
         return self._items.get(item_id)
@@ -77,6 +167,11 @@ class PantryStore:
         name = item_data.get("name", "Unknown Item")
         norm_name = item_data.get("normalized_name") or name.lower().strip()
         expiry_days = item_data.get("expiry_days", 7)
+
+        # ── Deduplication: if this ingredient already exists as available, skip ──
+        for existing in self._items.values():
+            if existing.status == "available" and existing.normalized_name == norm_name:
+                return existing   # Return the existing entry, do NOT create a duplicate
 
         if expiry_days <= 2:
             risk = "high"
@@ -103,6 +198,7 @@ class PantryStore:
             status="available",
         )
         self._items[item.id] = item
+        self._save()
         return item
 
     def update_item(self, item_id: str, updates: Dict[str, Any]) -> Optional[PantryItem]:
@@ -112,42 +208,43 @@ class PantryStore:
 
         updated_dict = item.model_dump()
         for k, v in updates.items():
-            if v is not None:
+            if k in updated_dict and v is not None:
                 updated_dict[k] = v
-
-        if "expiry_days" in updates:
-            days = updates["expiry_days"]
-            if days <= 2:
-                updated_dict["expiry_risk"] = "high"
-            elif days <= 6:
-                updated_dict["expiry_risk"] = "medium"
-            else:
-                updated_dict["expiry_risk"] = "low"
 
         updated_item = PantryItem(**updated_dict)
         self._items[item_id] = updated_item
+        self._save()
         return updated_item
 
     def delete_item(self, item_id: str) -> bool:
         if item_id in self._items:
             del self._items[item_id]
+            self._save()
             return True
         return False
 
-    def cook_recipe(self, recipe_ner: List[str]) -> List[str]:
+    def cook_recipe(self, recipe_ner: List[str], recipe_title: str = "A recipe") -> List[str]:
         """
         Pantry Feedback Loop: deducts recipe ingredients from available pantry items.
         """
         consumed = []
         for ing in recipe_ner:
             ing_clean = ing.lower().strip()
-            for item in self._items.values():
+            # Iterate over a list copy so we can modify statuses safely
+            for item in list(self._items.values()):
                 if item.status == "available" and (item.normalized_name in ing_clean or ing_clean in item.normalized_name or item.name.lower() in ing_clean):
-                    item.quantity = max(0.0, item.quantity - 1.0)
-                    if item.quantity == 0:
-                        item.status = "consumed"
+                    # Fully consume the item so it disappears from the Dynamic Pantry
+                    # regardless of whether the unit was in pieces or grams.
+                    item.quantity = 0.0
+                    item.status = "consumed"
                     consumed.append(item.name)
-                    break
+                    # We do NOT break here, so if the user accidentally added 
+                    # "paneer" twice, it clears out both duplicates from the pantry.
+        
+        if consumed:
+            self.add_notification(f"You just cooked '{recipe_title}'! Automatically utilized {len(set(consumed))} ingredients from your pantry.", "cooked")
+            self._save()
+            
         return consumed
 
 

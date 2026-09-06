@@ -86,7 +86,7 @@ def simulate_food_rescue(req: FoodRescueSimulationRequest):
 
     summary = (
         f"Simulated Cooking '{rec_title}': Uses {len(consumed_unique)} pantry ingredients "
-        f"and rescues {high_risk_rescued} high-risk expiring item(s). "
+        f"and utilizes {high_risk_rescued} high-risk expiring item(s). "
         f"{len(remaining)} items will remain available in your pantry."
     )
 

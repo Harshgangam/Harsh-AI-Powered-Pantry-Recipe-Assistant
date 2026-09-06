@@ -12,29 +12,43 @@ class SustainabilityAnalyticsService:
 
         total_items_tracked = len(pantry_items)
         consumed_count = len(consumed_items)
-        utilization_rate = (consumed_count / total_items_tracked * 100.0) if total_items_tracked > 0 else 78.5
+        
+        # Real-time Utilization Rate
+        utilization_rate = (consumed_count / total_items_tracked * 100.0) if total_items_tracked > 0 else 0.0
 
-        # Base mock analytics enriched with live pantry stats
-        rescued_high_risk = max(14, consumed_count * 2)
-        waste_avoided_kg = round(rescued_high_risk * 0.35, 2)
+        # Real-time items rescued
+        # We assume each consumed item was "rescued" from being thrown away
+        rescued_total = consumed_count
+        waste_avoided_kg = round(rescued_total * 0.35, 2)  # Avg 0.35kg per item
+        
+        # Rough proxy for recipes prepared (assume ~2 tracked ingredients per recipe)
+        recipes_prepared = rescued_total // 2
 
+        # 7-day trend (Initialize with 0s for actual real-time display)
+        # Since we don't track exact consumption date in MVP, we just show a static 
+        # flatline until we add time-series tracking, but it will be REAL (0s) instead of fake mock data.
         trend_data = [
-            {"day": "Mon", "rescued_items": 2, "utilization_pct": 72.0},
-            {"day": "Tue", "rescued_items": 3, "utilization_pct": 75.5},
-            {"day": "Wed", "rescued_items": 1, "utilization_pct": 78.0},
-            {"day": "Thu", "rescued_items": 4, "utilization_pct": 81.2},
-            {"day": "Fri", "rescued_items": 2, "utilization_pct": 82.0},
-            {"day": "Sat", "rescued_items": 5, "utilization_pct": 86.4},
-            {"day": "Sun", "rescued_items": 3, "utilization_pct": 88.5},
+            {"day": "Mon", "rescued_items": 0, "utilization_pct": 0},
+            {"day": "Tue", "rescued_items": 0, "utilization_pct": 0},
+            {"day": "Wed", "rescued_items": 0, "utilization_pct": 0},
+            {"day": "Thu", "rescued_items": 0, "utilization_pct": 0},
+            {"day": "Fri", "rescued_items": 0, "utilization_pct": 0},
+            {"day": "Sat", "rescued_items": 0, "utilization_pct": 0},
+            {"day": "Sun", "rescued_items": rescued_total, "utilization_pct": round(utilization_rate, 1)}, # Put all current rescues on today
         ]
 
+        if rescued_total == 0:
+            status_msg = "Your pantry utilization journey starts here. Cook recipes to utilize items and track your impact!"
+        else:
+            status_msg = f"Great job! You have utilized {rescued_total} ingredients."
+
         return {
-            "high_risk_rescued_count": rescued_high_risk,
+            "high_risk_rescued_count": rescued_total,
             "pantry_utilization_rate": round(utilization_rate, 1),
             "estimated_food_waste_avoided_kg": waste_avoided_kg,
-            "recipes_prepared_count": max(9, consumed_count),
+            "recipes_prepared_count": recipes_prepared,
             "current_high_risk_pantry_count": len(high_risk_items),
             "active_pantry_count": len(available_items),
             "sustainability_trend": trend_data,
-            "status_summary": f"Great job! You have rescued {rescued_high_risk} high-risk ingredients and avoided {waste_avoided_kg} kg of household food waste this month."
+            "status_summary": status_msg
         }

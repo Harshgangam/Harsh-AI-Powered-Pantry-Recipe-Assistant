@@ -108,7 +108,7 @@ class FoodRescueSimulationResponse(BaseModel):
 class PantryCookRequest(BaseModel):
     recipe_id: int
     recipe_title: str
-    cooked_ingredients: List[str]
+    recipe_ner: List[str]
 
 
 class PantryScanResponse(BaseModel):

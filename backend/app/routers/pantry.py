@@ -1,11 +1,104 @@
 from typing import Any, Dict, List, Optional
+import json
+from pathlib import Path
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
 
 from backend.app.pantry.pantry_store import PantryItem, pantry_store
 from backend.app.models.recommendation import PantryCookRequest, PantryScanResponse
+from backend.app.config import settings
 
 router = APIRouter(prefix="/pantry", tags=["pantry"])
+
+# ── Load FoodKeeper data once at startup ──────────────────────────────────────
+_FOODKEEPER_PATH = settings.PROCESSED_DATA_DIR / "foodkeeper.json"
+_foodkeeper_products: List[Dict] = []
+
+def _load_foodkeeper():
+    global _foodkeeper_products
+    if _FOODKEEPER_PATH.exists() and not _foodkeeper_products:
+        raw = json.loads(_FOODKEEPER_PATH.read_text(encoding="utf-8"))
+        for sheet in raw.get("sheets", []):
+            if sheet.get("name") == "Product":
+                for row in sheet.get("data", []):
+                    if isinstance(row, list):
+                        # Each row is a list of single-key dicts — merge them all
+                        merged: Dict = {}
+                        for field in row:
+                            if isinstance(field, dict):
+                                merged.update(field)
+                        _foodkeeper_products.append(merged)
+                    elif isinstance(row, dict):
+                        _foodkeeper_products.append(row)
+                break
+
+_load_foodkeeper()
+
+
+def _metric_to_days(value: float, metric: str) -> int:
+    """Convert FoodKeeper metric+value to integer days."""
+    metric = (metric or "").lower()
+    if "day" in metric:
+        return int(value)
+    if "week" in metric:
+        return int(value * 7)
+    if "month" in metric:
+        return int(value * 30)
+    if "year" in metric:
+        return int(value * 365)
+    return int(value)  # fallback: treat raw number as days
+
+
+def _lookup_shelf_life(ingredient: str) -> int:
+    """Fuzzy-match ingredient against FoodKeeper products → return shelf life days."""
+    query = ingredient.lower().strip()
+    best_days = None
+    best_score = 0
+
+    for product in _foodkeeper_products:
+        name = str(product.get("Name", "")).lower()
+        keywords = str(product.get("Keywords", "")).lower()
+        combined = f"{name} {keywords}"
+
+        # Score: exact name match > keyword match > partial
+        score = 0
+        if query == name:
+            score = 100
+        elif query in name or name in query:
+            score = 80
+        elif any(q in combined for q in query.split()):
+            score = 50
+
+        if score > best_score:
+            best_score = score
+            # Prefer DOP_Refrigerate (from date of purchase), then Refrigerate
+            for min_key, max_key, metric_key in [
+                ("DOP_Refrigerate_Min", "DOP_Refrigerate_Max", "DOP_Refrigerate_Metric"),
+                ("Refrigerate_Min", "Refrigerate_Max", "Refrigerate_Metric"),
+                ("DOP_Pantry_Min", "DOP_Pantry_Max", "DOP_Pantry_Metric"),
+            ]:
+                val = product.get(max_key) or product.get(min_key)
+                metric = product.get(metric_key, "")
+                if val and metric and "not recommended" not in str(metric).lower() and "use-by" not in str(metric).lower():
+                    best_days = _metric_to_days(float(val), metric)
+                    break
+
+    # Fallback defaults by common category keywords
+    if best_days is None:
+        fallbacks = {
+            "meat": 3, "chicken": 2, "fish": 2, "seafood": 2,
+            "milk": 7, "dairy": 10, "cheese": 14, "egg": 21,
+            "vegetable": 5, "fruit": 5, "bread": 5,
+            "grain": 180, "pasta": 180, "rice": 365, "can": 365,
+        }
+        for kw, days in fallbacks.items():
+            if kw in query:
+                best_days = days
+                break
+        if best_days is None:
+            best_days = 7  # generic default
+
+    return best_days
 
 
 class PantryItemCreate(BaseModel):
@@ -73,7 +166,7 @@ def record_cooking_feedback(req: PantryCookRequest):
     Pantry Feedback Loop: Updates the pantry database after the user cooks a recipe,
     deducting consumed quantities and marking depleted items as consumed.
     """
-    consumed_items = pantry_store.cook_recipe(req.recipe_ner)
+    consumed_items = pantry_store.cook_recipe(req.recipe_ner, req.recipe_title)
     return {
         "status": "success",
         "recipe_cooked": req.recipe_title,
@@ -81,6 +174,21 @@ def record_cooking_feedback(req: PantryCookRequest):
         "message": f"Successfully updated pantry after cooking '{req.recipe_title}'. Deducted {len(consumed_items)} pantry ingredients.",
         "current_pantry_state": pantry_store.get_all(status="available"),
     }
+
+@router.get("/notifications")
+def get_notifications():
+    """
+    Get all user notifications (expiries, cooking events).
+    """
+    return pantry_store.get_notifications()
+
+@router.post("/notifications/read")
+def mark_notifications_read():
+    """
+    Mark all unread notifications as read.
+    """
+    pantry_store.mark_notifications_read()
+    return {"status": "success"}
 
 
 @router.post("/scan-image", response_model=PantryScanResponse)
@@ -116,3 +224,22 @@ def scan_pantry_image():
         ocr_extracted_dates=dates,
         scan_summary="Vision and OCR pipeline successfully identified 4 ingredients and 2 expiry dates from the image. Pantry items updated!",
     )
+
+
+@router.get("/shelf-life/{ingredient}")
+def get_shelf_life(ingredient: str):
+    """
+    FoodKeeper Shelf-Life Lookup: Returns base shelf life in days for an ingredient.
+    Used by the frontend Freshness Buttons to auto-calculate expiry dates.
+    - 🟢 Fresh       → 100% of base_shelf_life_days
+    - 🟡 Few days old → 50% of base_shelf_life_days
+    - 🔴 Use immediately → always 1 day
+    """
+    days = _lookup_shelf_life(ingredient)
+    return {
+        "ingredient": ingredient,
+        "base_shelf_life_days": days,
+        "fresh_days": days,
+        "few_days_old_days": max(1, days // 2),
+        "use_immediately_days": 1,
+    }

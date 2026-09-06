@@ -4,7 +4,6 @@ import { Header } from './components/layout/Header';
 import { Footer } from './components/layout/Footer';
 import { PantryInput } from './components/pantry/PantryInput';
 import { PantryTagList } from './components/pantry/PantryTagList';
-import { QuickAddPantry } from './components/pantry/QuickAddPantry';
 import { PantryManagement } from './components/pantry/PantryManagement';
 import { PreferenceControls } from './components/preferences/PreferenceControls';
 import { RecipeCard } from './components/recommendations/RecipeCard';
@@ -23,19 +22,13 @@ export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'pantry' | 'recipes' | 'leftovers' | 'analytics'>('dashboard');
   const [rescueMode, setRescueMode] = useState<boolean>(false);
 
-  const { ingredients, addIngredient, removeIngredient, clearPantry, addMultiple } = usePantry([
-    'tomatoes',
-    'spinach',
-    'milk',
-    'paneer',
-    'pasta',
-    'garlic',
-    'olive oil',
-  ]);
+  const { ingredients, addIngredient, removeIngredient, clearPantry, addMultiple } = usePantry([]);
 
   const preferences = usePreferences();
   const { data, loading, error, search } = useRecommendations();
   const [selectedRecipe, setSelectedRecipe] = useState<RecipeRecommendationItem | null>(null);
+  // Incrementing this forces PantryManagement to remount and re-fetch from backend
+  const [pantryRefreshKey, setPantryRefreshKey] = useState(0);
 
   const handleSearch = (mode: boolean = rescueMode) => {
     setActiveTab('recipes');
@@ -93,7 +86,7 @@ export const App: React.FC = () => {
       </div>
 
       {/* Main Tab Views */}
-      {activeTab === 'pantry' && <PantryManagement />}
+      {activeTab === 'pantry' && <PantryManagement key={pantryRefreshKey} />}
 
       {activeTab === 'leftovers' && <LeftoversAndChains />}
 
@@ -133,7 +126,8 @@ export const App: React.FC = () => {
               <PantryInput onAdd={addIngredient} />
             </div>
 
-            <QuickAddPantry onAdd={addIngredient} currentIngredients={ingredients} />
+
+
 
             <PantryTagList
               ingredients={ingredients}
@@ -216,6 +210,14 @@ export const App: React.FC = () => {
           max_cooking_time_minutes: preferences.maxCookingTime,
         }}
         onClose={() => setSelectedRecipe(null)}
+        onCooked={(usedNer: string[]) => {
+          // Remove cooked ingredients from the frontend tag pills
+          for (const ing of usedNer) {
+            removeIngredient(ing);
+          }
+          // Force Dynamic Pantry Intelligence to re-fetch — cooked items will disappear
+          setPantryRefreshKey(k => k + 1);
+        }}
       />
 
       <Footer />

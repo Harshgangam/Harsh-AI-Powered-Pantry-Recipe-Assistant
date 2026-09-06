@@ -60,7 +60,7 @@ export const FoodRescueSimulatorModal: React.FC<FoodRescueSimulatorModalProps> =
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
               <div style={{ background: 'rgba(0,0,0,0.3)', padding: '12px', borderRadius: '8px' }}>
-                <div style={{ fontSize: '12px', color: '#9ca3af' }}>Rescued High-Risk Items</div>
+                <div style={{ fontSize: '12px', color: '#9ca3af' }}>Utilized High-Risk Items</div>
                 <div style={{ fontSize: '20px', fontWeight: 700, color: '#f59e0b', marginTop: '2px' }}>
                   {simulation.high_risk_rescued_count} item(s)
                 </div>

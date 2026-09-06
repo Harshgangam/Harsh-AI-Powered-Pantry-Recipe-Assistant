@@ -17,6 +17,7 @@ interface RecipeDetailModalProps {
     max_cooking_time_minutes?: number | null;
   };
   onClose: () => void;
+  onCooked?: (usedNer: string[]) => void;
 }
 
 export const RecipeDetailModal: React.FC<RecipeDetailModalProps> = ({
@@ -24,6 +25,7 @@ export const RecipeDetailModal: React.FC<RecipeDetailModalProps> = ({
   pantryIngredients,
   appliedPreferences,
   onClose,
+  onCooked,
 }) => {
   const [showSimulator, setShowSimulator] = useState(false);
 
@@ -69,6 +71,26 @@ export const RecipeDetailModal: React.FC<RecipeDetailModalProps> = ({
                 <Zap size={14} />
                 <span>Simulate Food Rescue</span>
               </button>
+              
+              <button 
+                onClick={() => setShowSimulator(true)}
+                style={{
+                  background: 'linear-gradient(135deg, #10b981, #059669)',
+                  color: 'white',
+                  border: 'none',
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <span>🍳 I made this!</span>
+              </button>
+              
               <button
                 type="button"
                 className="modal-close-btn"
@@ -197,7 +219,11 @@ export const RecipeDetailModal: React.FC<RecipeDetailModalProps> = ({
           recipeNer={recipe.ner}
           pantryIngredients={pantryIngredients || recipe.matched_ingredients}
           onClose={() => setShowSimulator(false)}
-          onCooked={() => setShowSimulator(false)}
+          onCooked={() => {
+            setShowSimulator(false);
+            if (onCooked) onCooked(recipe.ner);
+            onClose(); // Also close the recipe detail modal once cooked
+          }}
         />
       )}
     </>

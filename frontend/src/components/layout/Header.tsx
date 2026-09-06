@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ChefHat } from 'lucide-react';
 import { checkBackendHealth } from '../../services/api';
+import { NotificationPanel } from './NotificationPanel';
 
 export const Header: React.FC = () => {
   const [online, setOnline] = useState<boolean>(true);
@@ -25,12 +26,15 @@ export const Header: React.FC = () => {
         </div>
       </div>
 
-      <div className="status-badge">
-        <span
-          className="status-dot"
-          style={{ backgroundColor: online ? 'var(--color-primary)' : 'var(--color-error)' }}
-        />
-        <span>{online ? '2.23M Recipe Corpus Active' : 'Backend Disconnected'}</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <NotificationPanel />
+        <div className="status-badge">
+          <span
+            className="status-dot"
+            style={{ backgroundColor: online ? 'var(--color-primary)' : 'var(--color-error)' }}
+          />
+          <span>{online ? '2.23M Recipe Corpus Active' : 'Backend Disconnected'}</span>
+        </div>
       </div>
     </header>
   );

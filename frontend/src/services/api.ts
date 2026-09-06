@@ -11,7 +11,7 @@ import {
 } from '../types/api';
 import { PantryItem, LeftoverItem } from '../types/recipe';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
+export const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
 
 export class ApiServiceError extends Error {
   status?: number;
