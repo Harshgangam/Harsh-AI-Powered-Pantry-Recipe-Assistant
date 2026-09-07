@@ -25,18 +25,24 @@ class SustainabilityAnalyticsService:
         notifications = pantry_store.get_notifications()
         recipes_prepared = sum(1 for n in notifications if n.type == "cooked")
 
-        # 7-day trend (Initialize with 0s for actual real-time display)
-        # Since we don't track exact consumption date in MVP, we just show a static 
-        # flatline until we add time-series tracking, but it will be REAL (0s) instead of fake mock data.
-        trend_data = [
-            {"day": "Mon", "rescued_items": 0, "utilization_pct": 0},
-            {"day": "Tue", "rescued_items": 0, "utilization_pct": 0},
-            {"day": "Wed", "rescued_items": 0, "utilization_pct": 0},
-            {"day": "Thu", "rescued_items": 0, "utilization_pct": 0},
-            {"day": "Fri", "rescued_items": 0, "utilization_pct": 0},
-            {"day": "Sat", "rescued_items": 0, "utilization_pct": 0},
-            {"day": "Sun", "rescued_items": rescued_total, "utilization_pct": round(utilization_rate, 1)}, # Put all current rescues on today
-        ]
+        import datetime
+        trend_data = []
+        today = datetime.datetime.now()
+        
+        # 7-day trend (Initialize with 0s for previous 6 days, and put all rescues on today)
+        for i in range(6, -1, -1):
+            date = today - datetime.timedelta(days=i)
+            day_name = date.strftime("%a")
+            
+            # Put all current rescues on today (i == 0)
+            items = rescued_total if i == 0 else 0
+            pct = round(utilization_rate, 1) if i == 0 else 0
+            
+            trend_data.append({
+                "day": day_name,
+                "rescued_items": items,
+                "utilization_pct": pct
+            })
 
         if rescued_total == 0:
             status_msg = "Your pantry utilization journey starts here. Cook recipes to utilize items and track your impact!"
