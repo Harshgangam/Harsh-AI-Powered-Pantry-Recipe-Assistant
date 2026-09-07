@@ -106,6 +106,8 @@ body {
   border-radius: var(--radius-lg);
   margin-bottom: 2rem;
   box-shadow: var(--shadow-card);
+  position: relative;
+  z-index: 1000;
 }
 
 .brand-section {
