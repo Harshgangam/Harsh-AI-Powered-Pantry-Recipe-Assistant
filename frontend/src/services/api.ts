@@ -2,14 +2,12 @@ import {
   AssistantRequest,
   AssistantResponse,
   AssistantStatusResponse,
-  FoodRescueSimulationResponse,
   HealthResponse,
-  MealChainPlanResponse,
   PantryRequest,
   RecommendationResponse,
   SustainabilityMetricsResponse,
 } from '../types/api';
-import { PantryItem, LeftoverItem } from '../types/recipe';
+import { PantryItem } from '../types/recipe';
 
 export const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
 
@@ -68,19 +66,7 @@ export async function fetchRecommendations(
   }
 }
 
-export async function simulateFoodRescue(
-  recipeId: number,
-  pantryIngredients: string[]
-): Promise<FoodRescueSimulationResponse> {
-  const url = `${API_BASE}/api/recommendations/simulate`;
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ recipe_id: recipeId, pantry_ingredients: pantryIngredients }),
-  });
-  if (!response.ok) throw new ApiServiceError(`Simulation failed (${response.status})`);
-  return (await response.json()) as FoodRescueSimulationResponse;
-}
+
 
 export async function fetchPantryItems(): Promise<PantryItem[]> {
   try {
@@ -119,33 +105,7 @@ export async function scanPantryImage(): Promise<any> {
   return await response.json();
 }
 
-export async function fetchLeftovers(): Promise<LeftoverItem[]> {
-  try {
-    const response = await fetch(`${API_BASE}/api/leftovers`);
-    if (!response.ok) return [];
-    return (await response.json()) as LeftoverItem[];
-  } catch {
-    return [];
-  }
-}
 
-export async function addLeftover(dishName: string, primaryIngredients: string[]): Promise<LeftoverItem> {
-  const response = await fetch(`${API_BASE}/api/leftovers`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ dish_name: dishName, primary_ingredients: primaryIngredients }),
-  });
-  return (await response.json()) as LeftoverItem;
-}
-
-export async function fetchMealChainPlan(pantryIngredients?: string[]): Promise<MealChainPlanResponse> {
-  const response = await fetch(`${API_BASE}/api/leftovers/chain-plan`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ pantry_ingredients: pantryIngredients }),
-  });
-  return (await response.json()) as MealChainPlanResponse;
-}
 
 export async function fetchSustainabilityAnalytics(): Promise<SustainabilityMetricsResponse> {
   const response = await fetch(`${API_BASE}/api/analytics/sustainability`);

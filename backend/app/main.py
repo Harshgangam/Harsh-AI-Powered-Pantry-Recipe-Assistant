@@ -4,7 +4,6 @@ from backend.app.config import settings
 from backend.app.routers.recommendations import router as recommendations_router
 from backend.app.routers.assistant import router as assistant_router
 from backend.app.routers.pantry import router as pantry_router
-from backend.app.routers.leftovers import router as leftovers_router
 from backend.app.routers.analytics import router as analytics_router
 
 app = FastAPI(
@@ -29,8 +28,6 @@ app.include_router(assistant_router, prefix="/api")
 app.include_router(assistant_router, prefix=settings.API_V1_STR)
 app.include_router(pantry_router, prefix="/api")
 app.include_router(pantry_router, prefix=settings.API_V1_STR)
-app.include_router(leftovers_router, prefix="/api")
-app.include_router(leftovers_router, prefix=settings.API_V1_STR)
 app.include_router(analytics_router, prefix="/api")
 app.include_router(analytics_router, prefix=settings.API_V1_STR)
 
@@ -45,15 +42,11 @@ def read_root():
         "endpoints": {
             "pantry": "/api/pantry",
             "recommendations": "/api/recommendations",
-            "food_rescue_simulator": "/api/recommendations/simulate",
-            "leftovers": "/api/leftovers",
-            "meal_chain_plan": "/api/leftovers/chain-plan",
             "assistant_ask": "/api/assistant/ask",
             "sustainability_analytics": "/api/analytics/sustainability",
             "health": "/health",
         },
     }
-
 
 @app.get("/health")
 def health_check():

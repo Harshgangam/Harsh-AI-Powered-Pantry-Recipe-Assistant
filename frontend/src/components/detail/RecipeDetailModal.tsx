@@ -1,12 +1,11 @@
-import React, { useEffect, useState } from 'react';
-import { X, ExternalLink, Zap } from 'lucide-react';
+import React, { useEffect } from 'react';
+import { X, ExternalLink } from 'lucide-react';
 import { RecipeRecommendationItem } from '../../types/recipe';
 import { formatScore, formatTime, getDietaryLabel } from '../../utils/formatters';
 import { ExplanationCard } from './ExplanationCard';
 import { IngredientList } from './IngredientList';
 import { SubstitutionPanel } from './SubstitutionPanel';
 import { AiAssistantPanel } from './AiAssistantPanel';
-import { FoodRescueSimulatorModal } from '../recommendations/FoodRescueSimulatorModal';
 
 interface RecipeDetailModalProps {
   recipe: RecipeRecommendationItem | null;
@@ -27,8 +26,6 @@ export const RecipeDetailModal: React.FC<RecipeDetailModalProps> = ({
   onClose,
   onCooked,
 }) => {
-  const [showSimulator, setShowSimulator] = useState(false);
-
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -63,17 +60,11 @@ export const RecipeDetailModal: React.FC<RecipeDetailModalProps> = ({
               </div>
             </div>
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-              <button
-                type="button"
-                onClick={() => setShowSimulator(true)}
-                style={{ background: 'linear-gradient(135deg, #10b981, #059669)', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}
-              >
-                <Zap size={14} />
-                <span>Simulate Food Rescue</span>
-              </button>
-              
               <button 
-                onClick={() => setShowSimulator(true)}
+                onClick={() => {
+                  if (onCooked) onCooked(recipe.ner);
+                  onClose();
+                }}
                 style={{
                   background: 'linear-gradient(135deg, #10b981, #059669)',
                   color: 'white',
@@ -211,21 +202,6 @@ export const RecipeDetailModal: React.FC<RecipeDetailModalProps> = ({
           </div>
         </div>
       </div>
-
-      {showSimulator && (
-        <FoodRescueSimulatorModal
-          recipeId={recipe.recipe_id}
-          recipeTitle={recipe.title}
-          recipeNer={recipe.ner}
-          pantryIngredients={pantryIngredients || recipe.matched_ingredients}
-          onClose={() => setShowSimulator(false)}
-          onCooked={() => {
-            setShowSimulator(false);
-            if (onCooked) onCooked(recipe.ner);
-            onClose(); // Also close the recipe detail modal once cooked
-          }}
-        />
-      )}
     </>
   );
 };

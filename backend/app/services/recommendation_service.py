@@ -23,7 +23,6 @@ class RecommendationService:
             cuisine=request.cuisine,
             dietary_preference=request.dietary_preference,
             max_cooking_time_minutes=request.max_cooking_time_minutes,
-            rescue_mode=request.rescue_mode or False,
             pantry_items_details=request.pantry_items_details,
         )
 

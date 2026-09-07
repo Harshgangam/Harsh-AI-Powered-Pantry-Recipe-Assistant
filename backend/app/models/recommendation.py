@@ -33,10 +33,6 @@ class PantryRequest(BaseModel):
         ge=1,
         description="Maximum acceptable cooking duration in minutes.",
     )
-    rescue_mode: Optional[bool] = Field(
-        default=False,
-        description="Pantry Rescue Mode: prioritizes expiring ingredients and high pantry utilization.",
-    )
     pantry_items_details: Optional[List[Dict[str, Any]]] = Field(
         default=None,
         description="Optional structured pantry item details including expiry dates and risk levels.",
@@ -87,24 +83,6 @@ class PantryRequest(BaseModel):
         return v
 
 
-class FoodRescueSimulationRequest(BaseModel):
-    recipe_id: int
-    pantry_ingredients: List[str] = Field(default_factory=list)
-
-
-class FoodRescueSimulationResponse(BaseModel):
-    recipe_id: int
-    recipe_title: str
-    ingredients_consumed: List[str]
-    remaining_pantry: List[str]
-    high_risk_rescued_count: int
-    pantry_utilization_pct: float
-    missing_essential: List[str]
-    missing_optional: List[str]
-    can_prepare: bool
-    simulation_summary: str
-
-
 class PantryCookRequest(BaseModel):
     recipe_id: int
     recipe_title: str
@@ -115,22 +93,6 @@ class PantryScanResponse(BaseModel):
     detected_items: List[Dict[str, Any]]
     added_to_pantry_count: int
     scan_summary: str
-
-
-class LeftoverTransformRequest(BaseModel):
-    leftover_dish: str
-    primary_ingredients: List[str] = Field(default_factory=list)
-
-
-class MealChainPlanRequest(BaseModel):
-    days: int = 3
-    dietary_preference: Optional[str] = None
-
-
-class MealChainPlanResponse(BaseModel):
-    plan: List[Dict[str, Any]]
-    total_rescue_score: float
-    estimated_waste_reduction: str
 
 
 class ExplanationData(BaseModel):
@@ -191,6 +153,5 @@ class RecommendationResponse(BaseModel):
     normalized_pantry: List[str]
     relevant_pantry: List[str]
     total_candidates_evaluated: int
-    rescue_mode: bool = False
     applied_preferences: Dict[str, Any] = Field(default_factory=dict)
     recommendations: List[RecipeRecommendationItem]

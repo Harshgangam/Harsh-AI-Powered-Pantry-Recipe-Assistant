@@ -24,19 +24,6 @@ export interface RecommendationResponse {
   recommendations: RecipeRecommendationItem[];
 }
 
-export interface FoodRescueSimulationResponse {
-  recipe_id: number;
-  recipe_title: string;
-  ingredients_consumed: string[];
-  remaining_pantry: string[];
-  high_risk_rescued_count: number;
-  pantry_utilization_pct: number;
-  missing_essential: string[];
-  missing_optional: string[];
-  can_prepare: boolean;
-  simulation_summary: string;
-}
-
 export interface SustainabilityMetricsResponse {
   high_risk_rescued_count: number;
   pantry_utilization_rate: number;
@@ -48,19 +35,7 @@ export interface SustainabilityMetricsResponse {
   status_summary: string;
 }
 
-export interface MealChainPlanResponse {
-  plan: Array<{
-    day: number;
-    meal_name: string;
-    primary_ingredients_rescued: string[];
-    additional_purchases: string[];
-    expected_leftovers_generated: string;
-    food_rescue_score: number;
-    reasoning: string;
-  }>;
-  total_rescue_score: number;
-  estimated_waste_reduction: string;
-}
+
 
 export interface HealthResponse {
   status: string;

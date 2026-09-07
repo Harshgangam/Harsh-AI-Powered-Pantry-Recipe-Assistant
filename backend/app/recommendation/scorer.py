@@ -199,22 +199,13 @@ def calculate_frps(
     """
     Calculates Food Rescue Priority Score (FRPS) on a 0-100 scale.
     """
-    if rescue_mode:
-        w_ims = 0.25
-        w_pus = 0.20
-        w_eps = 0.20
-        w_qus = 0.15
-        w_dcs = 0.10
-        w_tcs = 0.10
-        w_mip = 0.10
-    else:
-        w_ims = 0.40
-        w_pus = 0.20
-        w_eps = 0.10
-        w_qus = 0.10
-        w_dcs = 0.10
-        w_tcs = 0.10
-        w_mip = 0.10
+    w_ims = 0.40
+    w_pus = 0.20
+    w_eps = 0.10
+    w_qus = 0.10
+    w_dcs = 0.10
+    w_tcs = 0.10
+    w_mip = 0.10
 
     raw_frps = (
         (ims * w_ims)
@@ -288,7 +279,6 @@ def generate_frps_explanation(
     relevant_used_count: int,
     total_relevant_count: int,
     eps: float,
-    rescue_mode: bool = False,
     dietary_preference: Optional[str] = None,
     max_cooking_time: Optional[int] = None,
 ) -> str:
@@ -304,9 +294,7 @@ def generate_frps_explanation(
     else:
         expiry_msg = "providing standard pantry use."
 
-    mode_prefix = "RESCUE MODE PRIORITY: " if rescue_mode else "This recipe was ranked highly because "
-
-    reasons = [f"{mode_prefix}it uses {len(matched_ingredients)} of {total_recipe_ingredients} required ingredients ({matched_str}), {expiry_msg}"]
+    reasons = [f"This recipe was ranked highly because it uses {len(matched_ingredients)} of {total_recipe_ingredients} required ingredients ({matched_str}), {expiry_msg}"]
 
     if total_relevant_count > 0:
         reasons.append(f"It consumes {relevant_used_count} of your {total_relevant_count} active pantry items.")

@@ -90,7 +90,6 @@ class AssistantService:
                 cuisine=effective_cuisine,
                 dietary_preference=effective_diet,
                 max_cooking_time_minutes=effective_max_time,
-                rescue_mode=(routed.intent == "FOOD_RESCUE"),
                 query_text=query_text,
             )
             if rec_response.recommendations:

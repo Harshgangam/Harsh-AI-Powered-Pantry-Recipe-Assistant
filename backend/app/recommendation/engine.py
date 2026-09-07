@@ -64,7 +64,6 @@ class RecommendationEngine:
         cuisine: Optional[str] = None,
         dietary_preference: Optional[str] = None,
         max_cooking_time_minutes: Optional[int] = None,
-        rescue_mode: bool = False,
         pantry_items_details: Optional[List[Dict[str, Any]]] = None,
         query_text: Optional[str] = None,
     ) -> RecommendationResponse:
@@ -81,8 +80,6 @@ class RecommendationEngine:
             applied_preferences["dietary_preference"] = dietary_preference
         if max_cooking_time_minutes is not None:
             applied_preferences["max_cooking_time_minutes"] = max_cooking_time_minutes
-        if rescue_mode:
-            applied_preferences["rescue_mode"] = True
 
         pantry_risk_map: Dict[str, str] = {}
         pantry_qty_map: Dict[str, float] = {}
@@ -114,7 +111,7 @@ class RecommendationEngine:
                 normalized_pantry=[],
                 relevant_pantry=[],
                 total_candidates_evaluated=0,
-                rescue_mode=rescue_mode,
+                rescue_mode=False,
                 applied_preferences=applied_preferences,
                 recommendations=[],
             )
@@ -139,7 +136,7 @@ class RecommendationEngine:
                 normalized_pantry=normalized_pantry,
                 relevant_pantry=[],
                 total_candidates_evaluated=0,
-                rescue_mode=rescue_mode,
+                rescue_mode=False,
                 applied_preferences=applied_preferences,
                 recommendations=[],
             )
@@ -217,7 +214,6 @@ class RecommendationEngine:
                 dcs=dcs,
                 tcs=tcs,
                 mip=mip,
-                rescue_mode=rescue_mode,
             )
 
             # 4d. Missing Ingredients Categorization & Substitutions
@@ -260,7 +256,6 @@ class RecommendationEngine:
                 relevant_used_count=used_count,
                 total_relevant_count=total_relevant,
                 eps=eps,
-                rescue_mode=rescue_mode,
                 dietary_preference=dietary_preference,
                 max_cooking_time=max_cooking_time_minutes,
             )
@@ -273,7 +268,7 @@ class RecommendationEngine:
 
             full_explanation = " ".join(explanation_parts)
 
-            final_ranking_score = frps_score if rescue_mode else personalized_score
+            final_ranking_score = personalized_score
 
             explanation_data = ExplanationData(
                 matched_ingredients=matched,
@@ -329,24 +324,14 @@ class RecommendationEngine:
             )
 
         # 5. Deterministic Ranking
-        if rescue_mode:
-            scored_candidates.sort(
-                key=lambda x: (
-                    -x.frps,
-                    -x.ims,
-                    -x.pus,
-                    x.recipe_id,
-                )
+        scored_candidates.sort(
+            key=lambda x: (
+                -x.recommendation_score,
+                -x.ims,
+                -x.pus,
+                x.recipe_id,
             )
-        else:
-            scored_candidates.sort(
-                key=lambda x: (
-                    -x.recommendation_score,
-                    -x.ims,
-                    -x.pus,
-                    x.recipe_id,
-                )
-            )
+        )
 
         top_recommendations = scored_candidates[:limit]
 
@@ -354,7 +339,7 @@ class RecommendationEngine:
             normalized_pantry=normalized_pantry,
             relevant_pantry=relevant_pantry_list,
             total_candidates_evaluated=len(scored_candidates),
-            rescue_mode=rescue_mode,
+            rescue_mode=False,
             applied_preferences=applied_preferences,
             recommendations=top_recommendations,
         )

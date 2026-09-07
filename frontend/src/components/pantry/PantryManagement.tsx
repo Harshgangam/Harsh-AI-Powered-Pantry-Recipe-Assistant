@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { PantryItem } from '../../types/recipe';
-import { fetchPantryItems, addPantryItem, deletePantryItem, scanPantryImage } from '../../services/api';
+import { fetchPantryItems, addPantryItem, deletePantryItem } from '../../services/api';
 
 interface PantryManagementProps {
   onPantryChange?: (items: string[]) => void;
@@ -18,11 +18,10 @@ export const PantryManagement: React.FC<PantryManagementProps> = ({ onPantryChan
   const [items, setItems] = useState<PantryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState('');
-  const [category, setCategory] = useState('Produce');
-  const [quantity, setQuantity] = useState(1);
-  const [unit, setUnit] = useState('pcs');
-  const [scanning, setScanning] = useState(false);
-  const [scanMessage, setScanMessage] = useState('');
+  const [category] = useState('Produce');
+  const [quantity] = useState(1);
+  const [unit] = useState('pcs');
+  const [scanMessage] = useState('');
 
   // Freshness state
   const [freshness, setFreshness] = useState<FreshnessLevel>('fresh');
@@ -86,14 +85,7 @@ export const PantryManagement: React.FC<PantryManagementProps> = ({ onPantryChan
     loadItems();
   };
 
-  const handleScan = async () => {
-    setScanning(true);
-    setScanMessage('Scanning image with computer vision & OCR...');
-    const res = await scanPantryImage();
-    setScanMessage(res.scan_summary);
-    setScanning(false);
-    loadItems();
-  };
+
 
   const getRiskBadge = (risk: string, days: number) => {
     if (risk === 'high' || days <= 2)

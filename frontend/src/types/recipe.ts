@@ -96,14 +96,4 @@ export interface PantryItem {
   status: 'available' | 'consumed' | 'expired';
 }
 
-export interface LeftoverItem {
-  id: string;
-  dish_name: string;
-  cooked_date: string;
-  quantity: number;
-  unit: string;
-  primary_ingredients: string[];
-  expiry_days: number;
-  expiry_risk: string;
-  status: string;
-}
+
