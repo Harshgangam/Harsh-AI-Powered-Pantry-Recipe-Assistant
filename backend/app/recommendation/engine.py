@@ -18,15 +18,9 @@ from backend.app.recommendation.normalizer import (
 from backend.app.recommendation.personalizer import evaluate_personalization
 from backend.app.recommendation.retriever import RecipeRetriever
 from backend.app.recommendation.scorer import (
-    calculate_dcs,
-    calculate_eps,
     calculate_final_score,
-    calculate_frps,
     calculate_ims,
-    calculate_mip,
     calculate_pus,
-    calculate_qus,
-    calculate_tcs,
     generate_explanation,
     generate_frps_explanation,
 )
@@ -111,7 +105,6 @@ class RecommendationEngine:
                 normalized_pantry=[],
                 relevant_pantry=[],
                 total_candidates_evaluated=0,
-                rescue_mode=False,
                 applied_preferences=applied_preferences,
                 recommendations=[],
             )
@@ -136,7 +129,6 @@ class RecommendationEngine:
                 normalized_pantry=normalized_pantry,
                 relevant_pantry=[],
                 total_candidates_evaluated=0,
-                rescue_mode=False,
                 applied_preferences=applied_preferences,
                 recommendations=[],
             )
@@ -322,7 +314,6 @@ class RecommendationEngine:
             normalized_pantry=normalized_pantry,
             relevant_pantry=relevant_pantry_list,
             total_candidates_evaluated=len(scored_candidates),
-            rescue_mode=False,
             applied_preferences=applied_preferences,
             recommendations=top_recommendations,
         )

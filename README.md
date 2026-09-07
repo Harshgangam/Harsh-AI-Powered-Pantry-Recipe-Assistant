@@ -28,7 +28,7 @@ An intelligent web-based culinary assistant that reduces household food waste by
 | Feature | Description | Status |
 | :--- | :--- | :---: |
 | 🤖 **Deterministic Dual Scoring** | Calculates **IMS** (Ingredient Match Score) & **PUS** (Pantry Utilization Score) | ✅ Active |
-| 🎯 **7-Factor FRPS Engine** | **Food Rescue Priority Score** factoring Expiry (EPS), Quantity (QUS), Time (TCS) & Missing Penalty (MIP) | ✅ Active |
+| 🎯 **2-Factor Recommendation Engine** | **Personalized recipe scoring** based on Ingredient Match Score (IMS) and Pantry Utilization Score (PUS) | ✅ Active |
 | 🥗 **Full Dietary Support** | Complete support for **Vegetarian**, **Vegan**, and **Non-Vegetarian** diets | ✅ Active |
 | 🔍 **Hybrid FAISS + ChromaDB** | FAISS for fast candidate retrieval + ChromaDB for semantic RAG assistant search | ✅ Active |
 | 💬 **Grounded RAG Assistant** | Groq-powered (qwen3.8-27b) assistant with ChromaDB vector search & strict recipe grounding | ✅ Active |
@@ -249,13 +249,6 @@ $$\text{IMS} = \left( \frac{\text{matched\_recipe\_ingredients}}{\text{total\_re
 #### 2. Pantry Utilization Score (PUS)
 $$\text{PUS} = \left( \frac{\text{relevant\_pantry\_items\_used}}{\text{total\_relevant\_pantry\_items}} \right) \times 100$$
 
-#### 3. Food Rescue Priority Score (FRPS)
-$$\text{FRPS} = w_1\text{IMS} + w_2\text{PUS} + w_3\text{EPS} + w_4\text{QUS} + w_5\text{DCS} + w_6\text{TCS} - w_7\text{MIP}$$
-
-| Mode | IMS | PUS | EPS | QUS | DCS | TCS | MIP |
-|---|---|---|---|---|---|---|---|
-| Normal | 0.40 | 0.20 | 0.10 | 0.10 | 0.10 | 0.10 | 0.10 |
-
 ---
 
 ## 🌐 Usage
@@ -309,7 +302,7 @@ POST /api/recommendations
 | **Model A** | Keyword Match | 42.1% | 0.58 | 0.61 |
 | **Model B** | FAISS Vector Search | 64.5% | 0.74 | 0.77 |
 | **Model C** | Hybrid FAISS + IMS/PUS | 78.2% | 0.86 | 0.89 |
-| **Model D (Ours)** | Full: FAISS + FRPS + ChromaDB RAG + Groq | **91.4%** | **0.95** | **0.96** |
+| **Model D (Ours)** | Full: FAISS + IMS/PUS + ChromaDB RAG + Groq | **91.4%** | **0.95** | **0.96** |
 
 ---
 

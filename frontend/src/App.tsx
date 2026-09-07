@@ -16,6 +16,7 @@ import { usePantry } from './hooks/usePantry';
 import { usePreferences } from './hooks/usePreferences';
 import { useRecommendations } from './hooks/useRecommendations';
 import { RecipeRecommendationItem } from './types/recipe';
+import { cookRecipe } from './services/api';
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'pantry' | 'recipes' | 'analytics'>('dashboard');
@@ -182,7 +183,14 @@ export const App: React.FC = () => {
           max_cooking_time_minutes: preferences.maxCookingTime,
         }}
         onClose={() => setSelectedRecipe(null)}
-        onCooked={(usedNer: string[]) => {
+        onCooked={async (usedNer: string[]) => {
+          try {
+            if (selectedRecipe) {
+              await cookRecipe(selectedRecipe.recipe_id, selectedRecipe.title, usedNer);
+            }
+          } catch (e) {
+            console.error('Failed to cook recipe:', e);
+          }
           // Remove cooked ingredients from the frontend tag pills
           for (const ing of usedNer) {
             removeIngredient(ing);
