@@ -200,21 +200,7 @@ class RecommendationEngine:
             # Use deduped total (matched + missing) so singular/plural duplicates
             # like 'tomato'/'tomatoes' don't inflate the ingredient count.
             deduped_total = len(matched) + len(missing)
-            eps = calculate_eps(matched, pantry_risk_map)
-            qus = calculate_qus(matched, pantry_qty_map)
-            dcs = calculate_dcs(dietary_preference, recipe_meta.get("dietary_compatibility"))
-            tcs = calculate_tcs(max_cooking_time_minutes, recipe_meta.get("estimated_time_minutes"))
-            mip = calculate_mip(len(missing), deduped_total)
 
-            frps_score, frps_breakdown = calculate_frps(
-                ims=ims,
-                pus=pus,
-                eps=eps,
-                qus=qus,
-                dcs=dcs,
-                tcs=tcs,
-                mip=mip,
-            )
 
             # 4d. Missing Ingredients Categorization & Substitutions
             essential_missing = []
@@ -255,7 +241,6 @@ class RecommendationEngine:
                 total_recipe_ingredients=deduped_total,
                 relevant_used_count=used_count,
                 total_relevant_count=total_relevant,
-                eps=eps,
                 dietary_preference=dietary_preference,
                 max_cooking_time=max_cooking_time_minutes,
             )
@@ -281,8 +266,7 @@ class RecommendationEngine:
                 pus=pus,
                 base_score=base_score,
                 final_score=final_ranking_score,
-                frps=frps_score,
-                frps_breakdown=frps_breakdown,
+
                 why_this_recipe=why_this_recipe,
                 cuisine_bonus=pref_matches.get("cuisine_bonus", 0.0),
                 time_adjustment=pref_matches.get("time_adjustment", 0.0),
@@ -307,8 +291,7 @@ class RecommendationEngine:
                     ims=ims,
                     pus=pus,
                     recommendation_score=final_ranking_score,
-                    frps=frps_score,
-                    frps_breakdown=frps_breakdown,
+
                     why_this_recipe=why_this_recipe,
                     explanation=full_explanation,
                     explanation_data=explanation_data,

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Award, Sparkles } from 'lucide-react';
 import { ExplanationData } from '../../types/recipe';
-import { formatScore } from '../../utils/formatters';
+
 
 interface ExplanationCardProps {
   explanation: string;
@@ -14,7 +14,6 @@ export const ExplanationCard: React.FC<ExplanationCardProps> = ({
   explanationData,
   preferenceExplanation,
 }) => {
-  const bd = explanationData.frps_breakdown;
 
   return (
     <div className="explanation-box">
@@ -39,24 +38,7 @@ export const ExplanationCard: React.FC<ExplanationCardProps> = ({
         </p>
       )}
 
-      {/* FRPS 7-Factor Breakdown */}
-      {bd && (
-        <div style={{ marginTop: '1rem', paddingTop: '0.75rem', borderTop: '1px solid rgba(16, 185, 129, 0.2)' }}>
-          <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#34d399', marginBottom: '8px' }}>
-            ⚡ Food Rescue Priority Score Breakdown (FRPS: {formatScore(explanationData.frps || explanationData.final_score)})
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '8px', fontSize: '0.75rem' }}>
-            <div style={{ background: 'rgba(0,0,0,0.25)', padding: '6px 10px', borderRadius: '6px' }}>
-              <span style={{ color: 'var(--text-dim)', display: 'block' }}>IMS (Match)</span>
-              <span style={{ fontWeight: 600, color: '#fff' }}>{bd.ims}% (w={bd.w_ims})</span>
-            </div>
-            <div style={{ background: 'rgba(0,0,0,0.25)', padding: '6px 10px', borderRadius: '6px' }}>
-              <span style={{ color: 'var(--text-dim)', display: 'block' }}>PUS (Utilized)</span>
-              <span style={{ fontWeight: 600, color: '#fff' }}>{bd.pus}% (w={bd.w_pus})</span>
-            </div>
-          </div>
-        </div>
-      )}
+
     </div>
   );
 };

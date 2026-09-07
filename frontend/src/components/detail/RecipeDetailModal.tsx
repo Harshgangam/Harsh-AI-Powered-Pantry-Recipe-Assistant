@@ -106,14 +106,7 @@ export const RecipeDetailModal: React.FC<RecipeDetailModalProps> = ({
                 borderRadius: 'var(--radius-md)',
               }}
             >
-              {recipe.frps !== undefined && (
-                <div>
-                  <span className="metric-label">Food Rescue Score</span>
-                  <span className="metric-value score-high" style={{ fontSize: '1.25rem', color: '#34d399' }}>
-                    {formatScore(recipe.frps)}
-                  </span>
-                </div>
-              )}
+
               <div>
                 <span className="metric-label">Recommendation Score</span>
                 <span className="metric-value score-high" style={{ fontSize: '1.25rem' }}>

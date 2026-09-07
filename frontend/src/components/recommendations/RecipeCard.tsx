@@ -35,12 +35,7 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onSelect }) => {
           </span>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
-          {recipe.frps !== undefined && (
-            <div className="card-score-ring" style={{ borderColor: '#10b981' }} title="Food Rescue Priority Score (FRPS)">
-              <span className="card-score-value" style={{ color: '#34d399' }}>{formatScore(recipe.frps)}</span>
-              <span className="card-score-sub">FRPS</span>
-            </div>
-          )}
+
           <div className="card-score-ring" title="Overall Recommendation Score">
             <span className="card-score-value">{formatScore(recipe.recommendation_score)}</span>
             <span className="card-score-sub">Score</span>

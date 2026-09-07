@@ -10,22 +10,7 @@ export interface SubstitutionCandidate {
   source?: string | null;
 }
 
-export interface FRPSBreakdown {
-  ims: number;
-  pus: number;
-  eps: number;
-  qus: number;
-  dcs: number;
-  tcs: number;
-  mip: number;
-  w_ims: number;
-  w_pus: number;
-  w_eps: number;
-  w_qus: number;
-  w_dcs: number;
-  w_tcs: number;
-  w_mip: number;
-}
+
 
 export interface ExplanationData {
   matched_ingredients: string[];
@@ -38,8 +23,7 @@ export interface ExplanationData {
   pus: number;
   base_score?: number | null;
   final_score: number;
-  frps?: number;
-  frps_breakdown?: FRPSBreakdown;
+
   why_this_recipe?: string;
   cuisine_bonus: number;
   time_adjustment: number;
@@ -66,8 +50,7 @@ export interface RecipeRecommendationItem {
   ims: number;
   pus: number;
   recommendation_score: number;
-  frps?: number;
-  frps_breakdown?: FRPSBreakdown;
+
   why_this_recipe?: string;
   explanation: string;
   explanation_data: ExplanationData;

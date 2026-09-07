@@ -73,170 +73,7 @@ def calculate_pus(
     return round(pus, 2), used_count, total_relevant
 
 
-def calculate_eps(
-    matched_ingredients: List[str],
-    pantry_items_risk: Optional[Dict[str, str]] = None,
-) -> float:
-    """
-    Calculates Expiry Priority Score (EPS, 0-100).
-    Measures how effectively the recipe rescue high-risk expiring items.
-    """
-    if not matched_ingredients:
-        return 0.0
 
-    if not pantry_items_risk:
-        return 50.0
-
-    total_risk_points = 0.0
-    count = 0
-
-    for ing in matched_ingredients:
-        ing_lower = ing.lower().strip()
-        risk = pantry_items_risk.get(ing_lower, 'low')
-        if risk == 'high':
-            total_risk_points += 100.0
-        elif risk == 'medium':
-            total_risk_points += 60.0
-        else:
-            total_risk_points += 20.0
-        count += 1
-
-    if count == 0:
-        return 0.0
-
-    return round(total_risk_points / count, 2)
-
-
-def calculate_qus(
-    matched_ingredients: List[str],
-    pantry_quantities: Optional[Dict[str, float]] = None,
-) -> float:
-    """
-    Calculates Quantity Utilization Score (QUS, 0-100).
-    """
-    if not matched_ingredients:
-        return 0.0
-    if not pantry_quantities:
-        return 75.0
-
-    utilized = sum(1 for ing in matched_ingredients if pantry_quantities.get(ing.lower(), 1.0) > 0)
-    return round((utilized / len(matched_ingredients)) * 100.0, 2)
-
-
-def calculate_dcs(
-    dietary_preference: Optional[str],
-    recipe_compatibility: Optional[str],
-) -> float:
-    """
-    Calculates Dietary Compatibility Score (DCS, 0-100).
-    100.0 if fully compatible or no constraint, 0.0 if incompatible.
-    """
-    if not dietary_preference:
-        return 100.0
-
-    pref = dietary_preference.lower()
-    compat = (recipe_compatibility or 'non_vegetarian').lower()
-
-    if pref == 'vegetarian':
-        if compat in ('vegetarian_compatible', 'vegan_compatible'):
-            return 100.0
-        return 0.0
-
-    if pref == 'vegan':
-        if compat == 'vegan_compatible':
-            return 100.0
-        return 0.0
-
-    if pref in ('non_vegetarian', 'non-vegetarian', 'non_veg'):
-        if compat == 'non_vegetarian':
-            return 100.0
-        return 0.0
-
-    return 100.0
-
-
-def calculate_tcs(
-    max_cooking_time: Optional[int],
-    estimated_time: Optional[int],
-) -> float:
-    """
-    Calculates Cooking-Time Compatibility Score (TCS, 0-100).
-    """
-    if max_cooking_time is None or max_cooking_time <= 0:
-        return 100.0
-    if estimated_time is None or estimated_time <= 0:
-        return 80.0
-
-    if estimated_time <= max_cooking_time:
-        headroom = max_cooking_time - estimated_time
-        return min(100.0, 80.0 + (headroom / max_cooking_time) * 20.0)
-    else:
-        over = estimated_time - max_cooking_time
-        penalty = min(80.0, over * 2.0)
-        return max(0.0, round(80.0 - penalty, 2))
-
-
-def calculate_mip(missing_count: int, total_recipe_ingredients: int) -> float:
-    """
-    Calculates Missing Ingredient Penalty (MIP, 0-100 scale penalty).
-    """
-    if total_recipe_ingredients == 0:
-        return 0.0
-    ratio = missing_count / total_recipe_ingredients
-    return round(ratio * 50.0, 2)
-
-
-def calculate_frps(
-    ims: float,
-    pus: float,
-    eps: float = 50.0,
-    qus: float = 75.0,
-    dcs: float = 100.0,
-    tcs: float = 100.0,
-    mip: float = 0.0,
-    rescue_mode: bool = False,
-) -> Tuple[float, Dict[str, float]]:
-    """
-    Calculates Food Rescue Priority Score (FRPS) on a 0-100 scale.
-    """
-    w_ims = 0.40
-    w_pus = 0.20
-    w_eps = 0.10
-    w_qus = 0.10
-    w_dcs = 0.10
-    w_tcs = 0.10
-    w_mip = 0.10
-
-    raw_frps = (
-        (ims * w_ims)
-        + (pus * w_pus)
-        + (eps * w_eps)
-        + (qus * w_qus)
-        + (dcs * w_dcs)
-        + (tcs * w_tcs)
-        - (mip * w_mip)
-    )
-
-    frps = min(100.0, max(0.0, raw_frps))
-
-    breakdown = {
-        "ims": round(ims, 1),
-        "pus": round(pus, 1),
-        "eps": round(eps, 1),
-        "qus": round(qus, 1),
-        "dcs": round(dcs, 1),
-        "tcs": round(tcs, 1),
-        "mip": round(mip, 1),
-        "w_ims": w_ims,
-        "w_pus": w_pus,
-        "w_eps": w_eps,
-        "w_qus": w_qus,
-        "w_dcs": w_dcs,
-        "w_tcs": w_tcs,
-        "w_mip": w_mip,
-    }
-
-    return round(frps, 2), breakdown
 
 
 def calculate_final_score(
@@ -278,23 +115,15 @@ def generate_frps_explanation(
     total_recipe_ingredients: int,
     relevant_used_count: int,
     total_relevant_count: int,
-    eps: float,
     dietary_preference: Optional[str] = None,
     max_cooking_time: Optional[int] = None,
 ) -> str:
     """
-    Generates grounded Explainable AI (XAI) rationale for FRPS ranking.
+    Generates grounded Explainable AI (XAI) rationale for ranking.
     """
     matched_str = ", ".join(matched_ingredients[:4]) if matched_ingredients else "none"
 
-    if eps >= 75.0:
-        expiry_msg = "It actively rescues high-risk expiring ingredients from your pantry."
-    elif eps >= 50.0:
-        expiry_msg = "It uses moderately fresh ingredients from your pantry."
-    else:
-        expiry_msg = "providing standard pantry use."
-
-    reasons = [f"This recipe was ranked highly because it uses {len(matched_ingredients)} of {total_recipe_ingredients} required ingredients ({matched_str}), {expiry_msg}"]
+    reasons = [f"This recipe was ranked highly because it uses {len(matched_ingredients)} of {total_recipe_ingredients} required ingredients ({matched_str})."]
 
     if total_relevant_count > 0:
         reasons.append(f"It consumes {relevant_used_count} of your {total_relevant_count} active pantry items.")

@@ -107,8 +107,7 @@ class ExplanationData(BaseModel):
     pus: float
     base_score: Optional[float] = None
     final_score: float
-    frps: float = 0.0
-    frps_breakdown: Optional[Dict[str, float]] = None
+
     why_this_recipe: Optional[str] = None
     cuisine_bonus: float = 0.0
     time_adjustment: float = 0.0
@@ -133,8 +132,7 @@ class RecipeRecommendationItem(BaseModel):
     ims: float
     pus: float
     recommendation_score: float
-    frps: float = 0.0
-    frps_breakdown: Optional[Dict[str, float]] = None
+
     why_this_recipe: Optional[str] = None
     explanation: str
     explanation_data: ExplanationData
