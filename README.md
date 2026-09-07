@@ -29,13 +29,10 @@ An intelligent web-based culinary assistant that reduces household food waste by
 | :--- | :--- | :---: |
 | 🤖 **Deterministic Dual Scoring** | Calculates **IMS** (Ingredient Match Score) & **PUS** (Pantry Utilization Score) | ✅ Active |
 | 🎯 **7-Factor FRPS Engine** | **Food Rescue Priority Score** factoring Expiry (EPS), Quantity (QUS), Time (TCS) & Missing Penalty (MIP) | ✅ Active |
-| 🔥 **Pantry Rescue Mode** | Dynamic weight shift prioritizing high-risk expiring ingredients (≤ 2 days left) | ✅ Active |
 | 🥗 **Full Dietary Support** | Complete support for **Vegetarian**, **Vegan**, and **Non-Vegetarian** diets | ✅ Active |
 | 🔍 **Hybrid FAISS + ChromaDB** | FAISS for fast candidate retrieval + ChromaDB for semantic RAG assistant search | ✅ Active |
 | 💬 **Grounded RAG Assistant** | Groq-powered (qwen3.8-27b) assistant with ChromaDB vector search & strict recipe grounding | ✅ Active |
 | ⚡ **Single Command Start** | Starts React + Vite frontend and FastAPI backend simultaneously with `npm run dev` | ✅ Active |
-| ♻️ **Food Rescue Simulator** | Pre-cooking simulation estimating pantry utilization & rescued ingredient count | ✅ Active |
-| 🔄 **3-Day Meal Rescue Planner** | Transforms cooked leftovers into new dishes & generates multi-day zero-waste meal sequences | ✅ Active |
 | 📊 **Visual Analytics** | Interactive sustainability dashboard tracking waste avoided (kg) & 7-day rescue trends | ✅ Active |
 
 ---
@@ -258,7 +255,6 @@ $$\text{FRPS} = w_1\text{IMS} + w_2\text{PUS} + w_3\text{EPS} + w_4\text{QUS} + 
 | Mode | IMS | PUS | EPS | QUS | DCS | TCS | MIP |
 |---|---|---|---|---|---|---|---|
 | Normal | 0.40 | 0.20 | 0.10 | 0.10 | 0.10 | 0.10 | 0.10 |
-| Rescue | 0.25 | 0.20 | 0.20 | 0.15 | 0.10 | 0.10 | 0.10 |
 
 ---
 
@@ -266,11 +262,8 @@ $$\text{FRPS} = w_1\text{IMS} + w_2\text{PUS} + w_3\text{EPS} + w_4\text{QUS} + 
 
 1. **Pantry Management** — Add ingredients with quantity, unit, storage location & expiry dates
 2. **Recipe Recommendations** — Get FRPS-ranked recipes from your pantry
-3. **Rescue Mode** — Toggle to prioritize expiring ingredients
-4. **AI Assistant** — Ask questions: *"Why this recipe?", "Simplify instructions", "Pantry prep guidance"*
-5. **Food Rescue Simulator** — Preview pantry consumption before cooking
-6. **Leftovers & Meal Planner** — Transform leftovers into a 3-day zero-waste plan
-7. **Sustainability Analytics** — Track food waste avoided & rescue trends
+3. **AI Assistant** — Ask questions: *"Why this recipe?", "Simplify instructions", "Pantry prep guidance"*
+4. **Sustainability Analytics** — Track food waste avoided & rescue trends
 
 ---
 
@@ -279,11 +272,9 @@ $$\text{FRPS} = w_1\text{IMS} + w_2\text{PUS} + w_3\text{EPS} + w_4\text{QUS} + 
 | Endpoint | Method | Description |
 | :--- | :---: | :--- |
 | `/api/recommendations` | `POST` | Get FRPS-ranked recipe recommendations |
-| `/api/recommendations/simulate` | `POST` | Preview food rescue impact |
 | `/api/pantry/items` | `GET/POST` | View or update pantry inventory |
 | `/api/pantry/cook` | `POST` | Deduct cooked recipe ingredients |
 | `/api/leftovers` | `GET/POST` | Manage active leftovers |
-| `/api/leftovers/chain-plan` | `POST` | Generate 3-day zero-waste meal plan |
 | `/api/assistant/ask` | `POST` | Groq RAG conversational AI assistant |
 | `/api/analytics/sustainability` | `GET` | Sustainability impact metrics |
 | `/health` | `GET` | Backend health check |
@@ -305,8 +296,7 @@ POST /api/recommendations
 {
   "pantry_ingredients": ["eggs", "tomatoes", "onion"],
   "limit": 5,
-  "dietary_preference": "vegetarian",
-  "rescue_mode": true
+  "dietary_preference": "vegetarian"
 }
 ```
 
