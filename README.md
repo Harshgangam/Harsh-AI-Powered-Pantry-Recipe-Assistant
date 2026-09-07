@@ -28,7 +28,7 @@ An intelligent web-based culinary assistant that reduces household food waste by
 | Feature | Description | Status |
 | :--- | :--- | :---: |
 | 🤖 **Deterministic Dual Scoring** | Calculates **IMS** (Ingredient Match Score) & **PUS** (Pantry Utilization Score) | ✅ Active |
-| 🎯 **7-Factor FRPS Engine** | **Food Rescue Priority Score** factoring Expiry (EPS), Quantity (QUS), Time (TCS) & Missing Penalty (MIP) | ✅ Active |
+| 🎯 **Engine** | **uses Ingredient Match Score (IMS) and Pantry Utilization Score (PUS). | ✅ Active |
 | 🥗 **Full Dietary Support** | Complete support for **Vegetarian**, **Vegan**, and **Non-Vegetarian** diets | ✅ Active |
 | 🔍 **Hybrid FAISS + ChromaDB** | FAISS for fast candidate retrieval + ChromaDB for semantic RAG assistant search | ✅ Active |
 | 💬 **Grounded RAG Assistant** | Groq-powered (qwen3.8-27b) assistant with ChromaDB vector search & strict recipe grounding | ✅ Active |
