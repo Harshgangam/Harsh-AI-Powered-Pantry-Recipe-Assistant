@@ -17,6 +17,7 @@ class PantryItem(BaseModel):
     expiry_risk: str = "low"  # "high", "medium", "low"
     storage_location: str = "pantry"  # "fridge", "pantry", "freezer"
     status: str = "available"  # "available", "consumed", "expired"
+    consumed_date: Optional[str] = None
 
 
 class AppNotification(BaseModel):
@@ -237,6 +238,7 @@ class PantryStore:
                     # regardless of whether the unit was in pieces or grams.
                     item.quantity = 0.0
                     item.status = "consumed"
+                    item.consumed_date = datetime.now().strftime("%Y-%m-%d")
                     consumed.append(item.name)
                     # We do NOT break here, so if the user accidentally added 
                     # "paneer" twice, it clears out both duplicates from the pantry.

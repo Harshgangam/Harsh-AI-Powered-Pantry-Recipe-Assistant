@@ -29,14 +29,26 @@ class SustainabilityAnalyticsService:
         trend_data = []
         today = datetime.datetime.now()
         
-        # 7-day trend (Initialize with 0s for previous 6 days, and put all rescues on today)
-        for i in range(6, -1, -1):
-            date = today - datetime.timedelta(days=i)
-            day_name = date.strftime("%a")
+        # Calculate daily usage based on the actual calendar days
+        daily_rescues = {}
+        for i in range(7):
+            d = (today - datetime.timedelta(days=i)).strftime("%Y-%m-%d")
+            daily_rescues[d] = 0
             
-            # Put all current rescues on today (i == 0)
-            items = rescued_total if i == 0 else 0
-            pct = round(utilization_rate, 1) if i == 0 else 0
+        for item in consumed_items:
+            # If it lacks a consumed_date (old data), attribute it to today
+            d = getattr(item, "consumed_date", None) or today.strftime("%Y-%m-%d")
+            if d in daily_rescues:
+                daily_rescues[d] += 1
+
+        # Build 7-day trend array (from oldest to today)
+        for i in range(6, -1, -1):
+            date_obj = today - datetime.timedelta(days=i)
+            d_str = date_obj.strftime("%Y-%m-%d")
+            day_name = date_obj.strftime("%a")
+            
+            items = daily_rescues.get(d_str, 0)
+            pct = round((items / total_items_tracked * 100.0), 1) if total_items_tracked > 0 else 0
             
             trend_data.append({
                 "day": day_name,
