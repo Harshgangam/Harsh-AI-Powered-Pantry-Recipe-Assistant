@@ -108,17 +108,23 @@ export const NotificationPanel: React.FC = () => {
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {notifications.map(n => (
-                <div key={n.id} style={{
-                  padding: '10px',
-                  borderRadius: '8px',
-                  background: n.type === 'expired' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)',
-                  border: n.type === 'expired' ? '1px solid rgba(239, 68, 68, 0.2)' : '1px solid rgba(16, 185, 129, 0.2)',
-                }}>
-                  <div style={{ fontSize: '12px', color: '#e2e8f0', lineHeight: '1.4' }}>{n.message}</div>
-                  <div style={{ fontSize: '10px', color: '#9ca3af', marginTop: '4px' }}>{n.timestamp}</div>
-                </div>
-              ))}
+              {notifications.map(n => {
+                // Clean up weird double/single quotes from backend recipe titles
+                const cleanMessage = n.message.replace(/['"]+/g, "'");
+                
+                return (
+                  <div key={n.id} style={{
+                    padding: '12px 14px',
+                    borderRadius: '10px',
+                    background: n.type === 'expired' ? 'rgba(239, 68, 68, 0.08)' : 'rgba(16, 185, 129, 0.08)',
+                    border: n.type === 'expired' ? '1px solid rgba(239, 68, 68, 0.15)' : '1px solid rgba(16, 185, 129, 0.15)',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+                  }}>
+                    <div style={{ fontSize: '13px', color: '#e2e8f0', lineHeight: '1.5', fontWeight: 500 }}>{cleanMessage}</div>
+                    <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '6px', fontWeight: 600, letterSpacing: '0.02em' }}>{n.timestamp}</div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
