@@ -236,5 +236,19 @@
     "expiry_risk": "low",
     "storage_location": "pantry",
     "status": "available"
+  },
+  "p_1788786869051": {
+    "id": "p_1788786869051",
+    "name": "paneer",
+    "normalized_name": "paneer",
+    "category": "General",
+    "quantity": 1.0,
+    "unit": "pcs",
+    "purchase_date": "2026-09-07",
+    "expiry_date": "2026-09-14",
+    "expiry_days": 7,
+    "expiry_risk": "low",
+    "storage_location": "pantry",
+    "status": "available"
   }
 }

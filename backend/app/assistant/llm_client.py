@@ -461,13 +461,11 @@ class GeminiClient(BaseLLMClient):
                         parts = candidates[0]["content"].get("parts", [])
                         if parts and "text" in parts[0]:
                             return parts[0]["text"].strip()
-                logger.warning(
-                    f"Gemini API returned status {response.status_code}: {response.text}. Falling back to MockLLMClient."
-                )
+                
+                # If we get here, the API returned a non-200 status code
+                return f"⚠️ **Gemini API Error:** The API returned status {response.status_code}.\n\nDetails: {response.text}"
         except Exception as e:
-            logger.warning(f"Error calling Gemini API ({e}). Falling back to MockLLMClient.")
-
-        return self.fallback.generate(system_prompt, user_prompt, context, task, question)
+            return f"⚠️ **Gemini Connection Error:** Could not connect to Gemini API.\n\nDetails: {str(e)}"
 
 
 class OpenAIClient(BaseLLMClient):
@@ -548,6 +546,60 @@ def get_llm_client() -> BaseLLMClient:
             temperature=settings.LLM_TEMPERATURE,
             max_tokens=settings.LLM_MAX_TOKENS,
         )
+    elif provider == "groq":
+        return GroqRAGClient()
     else:
         logger.info(f"Unrecognized provider '{provider}'; falling back to MockLLMClient.")
         return MockLLMClient()
+
+
+class GroqRAGClient(BaseLLMClient):
+    """
+    LLM Client that uses Groq LLM (qwen3.8-27b) with the pre-assembled
+    recipe context from AssistantService (Parquet + SQLite + RAG knowledge base).
+
+    The service.py already builds a rich user_prompt containing:
+      - Full recipe details (title, ingredients, directions)
+      - Pantry match info (matched/missing ingredients)
+      - RAG knowledge base docs
+      - Query intent & entities
+
+    So we simply pass that assembled prompt directly to Groq — no need
+    for a separate ChromaDB lookup here.
+    """
+
+    provider_name: str = "groq"
+    model_name: str = "qwen3.8-27b"
+    is_mock: bool = False
+
+    def generate(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        context: "StructuredRecipeContext",
+        task: "AssistantTask",
+        question: str | None = None,
+    ) -> str:
+        try:
+            import sys
+            from pathlib import Path
+            root = Path(__file__).resolve().parent.parent.parent.parent.parent
+            if str(root) not in sys.path:
+                sys.path.insert(0, str(root))
+
+            from src.llm_client import call_llm
+
+            # Use the pre-assembled prompt from service.py directly —
+            # it already contains the full recipe context + RAG docs.
+            messages = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user",   "content": user_prompt},
+            ]
+
+            return call_llm(messages)
+
+        except Exception as e:
+            logger.error(f"GroqRAGClient error: {e}")
+            # Graceful fallback to deterministic mock
+            return MockLLMClient().generate(system_prompt, user_prompt, context, task, question)
+

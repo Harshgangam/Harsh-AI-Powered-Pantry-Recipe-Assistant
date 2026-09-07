@@ -2,6 +2,16 @@ import os
 from pathlib import Path
 from pydantic import BaseModel
 
+# --- Simple native .env loader (since python-dotenv is not installed) ---
+env_path = Path(__file__).resolve().parent.parent.parent / ".env"
+if env_path.exists():
+    with open(env_path, "r") as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                key, val = line.split("=", 1)
+                os.environ[key.strip()] = val.strip().strip("'\"")
+# ------------------------------------------------------------------------
 
 class Settings(BaseModel):
     PROJECT_NAME: str = "AI-Powered Pantry Recipe Assistant"
