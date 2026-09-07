@@ -21,8 +21,9 @@ class SustainabilityAnalyticsService:
         rescued_total = consumed_count
         waste_avoided_kg = round(rescued_total * 0.35, 2)  # Avg 0.35kg per item
         
-        # Rough proxy for recipes prepared (assume ~2 tracked ingredients per recipe)
-        recipes_prepared = rescued_total // 2
+        # Recipes prepared is the number of 'cooked' notifications
+        notifications = pantry_store.get_notifications()
+        recipes_prepared = sum(1 for n in notifications if n.type == "cooked")
 
         # 7-day trend (Initialize with 0s for actual real-time display)
         # Since we don't track exact consumption date in MVP, we just show a static 
