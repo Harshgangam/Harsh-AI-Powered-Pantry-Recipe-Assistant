@@ -250,11 +250,11 @@ $$\text{IMS} = \left( \frac{\text{matched\_recipe\_ingredients}}{\text{total\_re
 $$\text{PUS} = \left( \frac{\text{relevant\_pantry\_items\_used}}{\text{total\_relevant\_pantry\_items}} \right) \times 100$$
 
 #### 3. Food Rescue Priority Score (FRPS)
-$$\text{FRPS} = w_1\text{IMS} + w_2\text{PUS} + w_3\text{EPS} + w_4\text{QUS} + w_5\text{DCS} + w_6\text{TCS} - w_7\text{MIP}$$
+The final ranking score uses a base calculation that heavily weighs ingredient availability and pantry utilization, which is then adjusted by a personalization engine.
 
-| Mode | IMS | PUS | EPS | QUS | DCS | TCS | MIP |
-|---|---|---|---|---|---|---|---|
-| Normal | 0.40 | 0.20 | 0.10 | 0.10 | 0.10 | 0.10 | 0.10 |
+$$\text{FRPS Base} = (0.60 \times \text{IMS}) + (0.40 \times \text{PUS})$$
+
+*The base score is then adjusted dynamically via a **Personalization Engine** which applies score modifiers based on **Dietary Compatibility**, **Cuisine Preferences**, and **Time Constraints**.*
 
 ---
 
